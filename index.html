@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>整數大決鬥 V1.1 - 七年級數學對戰</title>
+  <title>整數大決鬥 V1.2 - 七年級數學對戰</title>
   
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -90,7 +90,7 @@
 
   <!-- Version Tag on Top Left -->
   <div class="fixed top-2 left-3 text-xs font-black text-amber-400 bg-amber-400/10 border border-amber-400/30 px-2 py-0.5 rounded-md z-50 pointer-events-none">
-    V1.1
+    V1.2
   </div>
 
   <!-- Fixed Signature on Top Right -->
@@ -290,9 +290,13 @@
     let nickname = '';
     let currentScreen = 'login';
     let currentRoomId = null;
-    let currentSeat = null;
+    let currentSeat = null; // 1 or 2
     let currentQuestion = null;
-    let lastProcessedEventId = null;
+    
+    // Direct Realtime HP Tracker for V1.2
+    let myHp = 7;
+    let opponentHp = 7;
+    let opponentName = '對手';
     
     let lobbyChannel = null;
     let gameChannel = null;
@@ -332,7 +336,7 @@
     const resultModal = document.getElementById('modal-result');
 
     // =========================================================================
-    // 4. RANDOM QUESTION GENERATOR (Math: Integers Addition & Subtraction)
+    // 4. RANDOM QUESTION GENERATOR
     // =========================================================================
     function generateMathQuestion() {
       const getRandomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
@@ -378,7 +382,7 @@
     }
 
     // =========================================================================
-    // 5. NAVIGATION & SCREEN MANAGEMENT
+    // 5. NAVIGATION & UI HELPER
     // =========================================================================
     function showScreen(screenName) {
       currentScreen = screenName;
@@ -411,6 +415,13 @@
         toast.classList.add('opacity-0');
         setTimeout(() => toast.remove(), 300);
       }, 3000);
+    }
+
+    function updateHpUI() {
+      p1HpBar.style.width = `${Math.max(0, (myHp / 7) * 100)}%`;
+      p1HpText.innerText = `${myHp} HP`;
+      p2HpBar.style.width = `${Math.max(0, (opponentHp / 7) * 100)}%`;
+      p2HpText.innerText = `${opponentHp} HP`;
     }
 
     // =========================================================================
@@ -479,7 +490,7 @@
     }
 
     // =========================================================================
-    // 8. ROOM CREATION & HEARTBEAT (Seat 1)
+    // 8. ROOM CREATION & HEARTBEAT
     // =========================================================================
     async function handleCreateRoom() {
       try {
@@ -495,7 +506,7 @@
 
         showScreen('waiting');
         startHeartbeat();
-        subscribeGameChannelAsHost();
+        subscribeGameChannel();
 
       } catch (err) {
         console.error("Create room failed:", err);
@@ -540,39 +551,8 @@
       fetchLiveRooms();
     }
 
-    function subscribeGameChannelAsHost() {
-      if (gameChannel) supabaseClient.removeChannel(gameChannel);
-
-      gameChannel = supabaseClient.channel(`game-${currentRoomId}`, {
-        config: { presence: { key: clientToken } }
-      });
-
-      gameChannel
-        .on('broadcast', { event: 'join_probe' }, (payload) => {
-          if (currentScreen === 'waiting') {
-            gameChannel.send({
-              type: 'broadcast',
-              event: 'host_ack',
-              payload: { probe_id: payload.payload.probe_id }
-            });
-          }
-        })
-        .on('postgres_changes', {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'game_state',
-          filter: `room_id=eq.${currentRoomId}`
-        }, (payload) => {
-          if (payload.new.status === 'playing') {
-            stopHeartbeat();
-            setupBattleScreen(payload.new);
-          }
-        })
-        .subscribe();
-    }
-
     // =========================================================================
-    // 9. JOIN ROOM PROBE & HANDSHAKE (Seat 2)
+    // 9. JOIN ROOM PROBE & HANDSHAKE
     // =========================================================================
     async function handleJoinRoomAttempt(targetRoomId) {
       const probeId = crypto.randomUUID();
@@ -610,7 +590,7 @@
                   currentRoomId = targetRoomId;
                   currentSeat = 2;
 
-                  subscribeGameChannelForBattle();
+                  subscribeGameChannel();
 
                 } catch (err) {
                   console.error("Join room failed:", err);
@@ -627,9 +607,9 @@
     }
 
     // =========================================================================
-    // 10. BATTLE CHANNEL & PRESENCE DISCONNECT GUARD
+    // 10. REALTIME GAME CHANNEL (V1.2 REFACTORED FOR DIRECT HP SYNC)
     // =========================================================================
-    function subscribeGameChannelForBattle() {
+    function subscribeGameChannel() {
       if (gameChannel) supabaseClient.removeChannel(gameChannel);
 
       gameChannel = supabaseClient.channel(`game-${currentRoomId}`, {
@@ -639,10 +619,24 @@
       opponentWasPresent = false;
 
       gameChannel
+        .on('broadcast', { event: 'join_probe' }, (payload) => {
+          if (currentScreen === 'waiting' && currentSeat === 1) {
+            gameChannel.send({
+              type: 'broadcast',
+              event: 'host_ack',
+              payload: { probe_id: payload.payload.probe_id }
+            });
+          }
+        })
+        .on('broadcast', { event: 'action_event' }, (payload) => {
+          const evt = payload.payload;
+          if (evt.senderSeat !== currentSeat) {
+            handleOpponentAction(evt);
+          }
+        })
         .on('presence', { event: 'sync' }, () => {
           const state = gameChannel.presenceState();
           const presentTokens = Object.keys(state);
-
           const opponentPresent = presentTokens.some(token => token !== clientToken);
 
           if (opponentPresent) {
@@ -651,11 +645,15 @@
               clearTimeout(disconnectTimer);
               disconnectTimer = null;
             }
+            if (currentScreen === 'waiting') {
+              stopHeartbeat();
+              startBattle();
+            }
           } else if (opponentWasPresent && !disconnectTimer && currentScreen === 'battle') {
             disconnectTimer = setTimeout(() => {
               if (currentScreen === 'battle') {
                 showToast("對手已斷線", true);
-                renderGameOverUI(currentSeat === 1 ? 1 : 2, true);
+                renderGameOverUI(true);
               }
             }, 5000);
           }
@@ -666,30 +664,25 @@
           table: 'game_state',
           filter: `room_id=eq.${currentRoomId}`
         }, (payload) => {
-          handleGameStateUpdate(payload.new);
+          if (payload.new.status === 'playing' && currentScreen === 'waiting') {
+            stopHeartbeat();
+            startBattle();
+          }
         })
         .subscribe(async (status) => {
           if (status === 'SUBSCRIBED') {
-            await gameChannel.track({
-              seat: currentSeat,
-              nickname: nickname
-            });
-
-            const { data } = await supabaseClient
-              .from('game_state')
-              .select('*')
-              .eq('room_id', currentRoomId)
-              .single();
-
-            if (data) setupBattleScreen(data);
+            await gameChannel.track({ seat: currentSeat, nickname: nickname });
           }
         });
     }
 
     // =========================================================================
-    // 11. BATTLE LOGIC & GAME STATE HANDLER (EXPLICIT HP DEDUCTION FIX)
+    // 11. BATTLE ENGINE (V1.2 REALTIME CLIENT-SIDE SYNC)
     // =========================================================================
-    function setupBattleScreen(gameState) {
+    function startBattle() {
+      myHp = 7;
+      opponentHp = 7;
+      
       showScreen('battle');
 
       const seed = currentRoomId.replace(/-/g, '');
@@ -702,46 +695,18 @@
 
       if (currentSeat === 1) {
         p1Avatar.innerText = p1Emoji;
-        p1Name.innerText = `${gameState.player1_name || nickname} (我方)`;
+        p1Name.innerText = `${nickname} (我方)`;
         p2Avatar.innerText = p2Emoji;
-        p2Name.innerText = `${gameState.player2_name || '對手'}`;
+        p2Name.innerText = `對手`;
       } else {
         p1Avatar.innerText = p2Emoji;
-        p1Name.innerText = `${gameState.player2_name || nickname} (我方)`;
+        p1Name.innerText = `${nickname} (我方)`;
         p2Avatar.innerText = p1Emoji;
-        p2Name.innerText = `${gameState.player1_name || '對手'}`;
+        p2Name.innerText = `對手`;
       }
 
+      updateHpUI();
       renderNextQuestion();
-      handleGameStateUpdate(gameState);
-    }
-
-    function handleGameStateUpdate(gs) {
-      let myHp, oppHp;
-      if (currentSeat === 1) {
-        myHp = gs.player1_hp;
-        oppHp = gs.player2_hp;
-      } else {
-        myHp = gs.player2_hp;
-        oppHp = gs.player1_hp;
-      }
-
-      // Update HP Bars
-      p1HpBar.style.width = `${Math.max(0, (myHp / 7) * 100)}%`;
-      p1HpText.innerText = `${myHp} HP`;
-      p2HpBar.style.width = `${Math.max(0, (oppHp / 7) * 100)}%`;
-      p2HpText.innerText = `${oppHp} HP`;
-
-      // Trigger Animations for Last Event
-      if (gs.last_event_id && gs.last_event_id !== lastProcessedEventId) {
-        lastProcessedEventId = gs.last_event_id;
-        triggerAttackAnimation(gs.last_event_seat, gs.last_event_type);
-      }
-
-      // Check Game Over
-      if (gs.status === 'finished') {
-        renderGameOverUI(gs.winner_seat);
-      }
     }
 
     async function submitAnswer(isCorrect, selectedBtn) {
@@ -749,57 +714,90 @@
 
       if (isCorrect) {
         selectedBtn.className = "btn-option p-3 sm:py-4 bg-emerald-600 border border-emerald-400 rounded-xl font-black text-lg sm:text-xl text-white flex items-center justify-center";
-        showFloatingText("答對！💥", selectedBtn, "text-emerald-400");
-      } else {
-        selectedBtn.className = "btn-option p-3 sm:py-4 bg-rose-600 border border-rose-400 rounded-xl font-black text-lg sm:text-xl text-white flex items-center justify-center";
-        showFloatingText("差一點！扣 1 HP", selectedBtn, "text-rose-400");
-      }
+        showFloatingText("答對！攻擊！💥", selectedBtn, "text-emerald-400");
+        
+        // Correct Answer: Deduct opponent HP by 1
+        opponentHp = Math.max(0, opponentHp - 1);
+        updateHpUI();
+        triggerAttackAnimation(true, 'hit');
 
-      try {
-        // Enforce strict boolean type for RPC call
-        const { data, error } = await supabaseClient.rpc('resolve_answer', {
-          p_room_id: currentRoomId,
-          p_client_token: clientToken,
-          p_is_correct: Boolean(isCorrect)
+        // Broadcast to opponent
+        gameChannel.send({
+          type: 'broadcast',
+          event: 'action_event',
+          payload: { senderSeat: currentSeat, type: 'attack', targetHp: opponentHp }
         });
 
-        if (error) {
-          console.error("Resolve answer RPC error:", error);
-        } else if (data) {
-          // Instantly sync local state returned by RPC
-          const { data: updatedGs } = await supabaseClient
-            .from('game_state')
-            .select('*')
-            .eq('room_id', currentRoomId)
-            .single();
-          if (updatedGs) handleGameStateUpdate(updatedGs);
-        }
-      } catch (err) {
-        console.error("RPC Submission error:", err);
+      } else {
+        selectedBtn.className = "btn-option p-3 sm:py-4 bg-rose-600 border border-rose-400 rounded-xl font-black text-lg sm:text-xl text-white flex items-center justify-center";
+        showFloatingText("答錯！扣 1 HP", selectedBtn, "text-rose-400");
+
+        // Wrong Answer: Deduct my own HP by 1
+        myHp = Math.max(0, myHp - 1);
+        updateHpUI();
+        triggerAttackAnimation(false, 'self_hit');
+
+        // Broadcast to opponent
+        gameChannel.send({
+          type: 'broadcast',
+          event: 'action_event',
+          payload: { senderSeat: currentSeat, type: 'self_damage', myRemainingHp: myHp }
+        });
+      }
+
+      // Check Win / Lose Conditions
+      if (opponentHp <= 0) {
+        setTimeout(() => renderGameOverUI(true), 600);
+        return;
+      } else if (myHp <= 0) {
+        setTimeout(() => renderGameOverUI(false), 600);
+        return;
       }
 
       setTimeout(() => {
         if (currentScreen === 'battle') {
           renderNextQuestion();
         }
-      }, 1000);
+      }, 900);
     }
 
-    function triggerAttackAnimation(attackerSeat, eventType) {
-      const isMyAttack = attackerSeat === currentSeat;
-      const attackerAvatar = isMyAttack ? p1Avatar : p2Avatar;
-      const victimAvatar = isMyAttack ? p2Avatar : p1Avatar;
+    function handleOpponentAction(evt) {
+      if (evt.type === 'attack') {
+        // Opponent answered correctly -> My HP decreases
+        myHp = Math.max(0, evt.targetHp);
+        updateHpUI();
+        triggerAttackAnimation(false, 'hit');
+
+        if (myHp <= 0) {
+          setTimeout(() => renderGameOverUI(false), 600);
+        }
+      } else if (evt.type === 'self_damage') {
+        // Opponent answered wrong -> Opponent HP decreases
+        opponentHp = Math.max(0, evt.myRemainingHp);
+        updateHpUI();
+        triggerAttackAnimation(true, 'self_hit');
+
+        if (opponentHp <= 0) {
+          setTimeout(() => renderGameOverUI(true), 600);
+        }
+      }
+    }
+
+    function triggerAttackAnimation(isMyAction, eventType) {
+      const attackerAvatar = isMyAction ? p1Avatar : p2Avatar;
+      const victimAvatar = isMyAction ? p2Avatar : p1Avatar;
 
       if (eventType === 'hit') {
-        attackerAvatar.classList.add(isMyAttack ? 'dash-right' : 'dash-left');
+        attackerAvatar.classList.add(isMyAction ? 'dash-right' : 'dash-left');
         setTimeout(() => {
           attackerAvatar.classList.remove('dash-right', 'dash-left');
           victimAvatar.classList.add('shake');
           setTimeout(() => victimAvatar.classList.remove('shake'), 500);
         }, 200);
       } else if (eventType === 'self_hit') {
-        attackerAvatar.classList.add('shake');
-        setTimeout(() => attackerAvatar.classList.remove('shake'), 500);
+        const targetAvatar = isMyAction ? p1Avatar : p2Avatar;
+        targetAvatar.classList.add('shake');
+        setTimeout(() => targetAvatar.classList.remove('shake'), 500);
       }
     }
 
@@ -815,9 +813,8 @@
       setTimeout(() => floatEl.remove(), 800);
     }
 
-    function renderGameOverUI(winnerSeat, isOpponentDisconnected = false) {
+    function renderGameOverUI(isWinner) {
       resultModal.classList.remove('hidden');
-      const isWinner = winnerSeat === currentSeat;
 
       const titleEl = document.getElementById('result-title');
       const descEl = document.getElementById('result-desc');
@@ -827,7 +824,7 @@
         iconEl.innerText = '🏆';
         titleEl.innerText = '榮耀勝利！';
         titleEl.className = 'text-4xl font-black text-yellow-400 mb-2';
-        descEl.innerText = isOpponentDisconnected ? '對手已斷線，判定你獲得勝利！' : '太棒了！你的整數加減計算能力技壓群雄！';
+        descEl.innerText = '太棒了！你的正負整數運算技巧獲得了壓倒性的勝利！';
         
         confetti({
           particleCount: 120,
@@ -838,7 +835,7 @@
         iconEl.innerText = '💪';
         titleEl.innerText = '再接再厲！';
         titleEl.className = 'text-4xl font-black text-indigo-300 mb-2';
-        descEl.innerText = '這次差了一點點，再練幾題下次一定能贏！';
+        descEl.innerText = '這次差了一點點，再多練習幾題下次一定能獲得勝利！';
       }
     }
 
@@ -858,7 +855,6 @@
       currentRoomId = null;
       currentSeat = null;
       opponentWasPresent = false;
-      lastProcessedEventId = null;
     }
 
     function escapeHtml(str) {
