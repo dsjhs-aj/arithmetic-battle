@@ -2,608 +2,925 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>整數加減大對決 - 7年級數學對戰</title>
-  <!-- Supabase JS Client v2 CDN -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>整數大決鬥 - 七年級數學對戰</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Supabase JS Client CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <!-- MathJax for Math Rendering -->
-  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <!-- Canvas Confetti CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
   <style>
-    :root {
-      --bg-color: #f0f4f8;
-      --card-bg: #ffffff;
-      --primary: #4a90e2;
-      --primary-hover: #357abd;
-      --secondary: #ff6b6b;
-      --accent: #f5a623;
-      --text-main: #333333;
-      --text-muted: #666666;
-      --border-radius: 12px;
-      --box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; }
-    body { background: var(--bg-color); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 10px; }
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Noto+Sans+TC:wght@400;700;900&display=swap');
     
-    .watermark { position: fixed; top: 10px; right: 15px; font-size: 0.8rem; color: #888; z-index: 1000; font-weight: bold; }
-    
-    .screen { display: none; width: 100%; max-width: 800px; background: var(--card-bg); padding: 20px; border-radius: var(--border-radius); box-shadow: var(--box-shadow); text-align: center; }
-    .screen.active { display: block; }
-
-    /* Login & Lobby */
-    h1 { margin-bottom: 10px; color: var(--primary); }
-    .subtitle { color: var(--text-muted); margin-bottom: 20px; }
-    input[type="text"] { width: 80%; max-width: 300px; padding: 12px; font-size: 1.1rem; border: 2px solid #ccc; border-radius: 8px; margin-bottom: 15px; outline: none; text-align: center; }
-    input[type="text"]:focus { border-color: var(--primary); }
-    button { padding: 12px 24px; font-size: 1.1rem; font-weight: bold; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; transition: 0.2s; margin: 5px; }
-    button:hover { background: var(--primary-hover); }
-    button.btn-danger { background: var(--secondary); }
-    button.btn-danger:hover { background: #e05252; }
-    
-    .status-badge { font-size: 0.9rem; margin-top: 15px; padding: 5px 10px; display: inline-block; border-radius: 20px; background: #e2e8f0; }
-    .status-badge.connected { background: #e6fffa; color: #234e52; }
-
-    .room-list { margin: 20px 0; max-height: 250px; overflow-y: auto; text-align: left; border: 1px solid #eee; border-radius: 8px; padding: 10px; }
-    .room-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; }
-    .room-item:last-child { border-bottom: none; }
-
-    /* Battle Screen */
-    .battle-hud { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: #f8fafc; padding: 15px; border-radius: 8px; }
-    .player-card { display: flex; flex-direction: column; align-items: center; width: 35%; }
-    .avatar { font-size: 3rem; }
-    .player-name { font-weight: bold; margin: 5px 0; }
-    .hp-bar-bg { width: 100%; height: 16px; background: #e2e8f0; border-radius: 8px; overflow: hidden; margin-top: 5px; }
-    .hp-bar-fill { height: 100%; background: #48bb78; transition: width 0.3s ease; }
-    .vs-text { font-size: 1.5rem; font-weight: bold; color: var(--secondary); }
-
-    .question-box { font-size: 2rem; margin: 25px 0; min-height: 80px; display: flex; justify-content: center; align-items: center; background: #edf2f7; border-radius: 8px; padding: 10px; }
-    .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-    .option-btn { padding: 18px; font-size: 1.3rem; background: white; border: 2px solid var(--primary); color: var(--primary); border-radius: 8px; font-weight: bold; }
-    .option-btn:hover { background: var(--primary); color: white; }
-
-    /* Orientation overlay for phones */
-    #portrait-overlay { display: none; position: fixed; top:0; left:0; width:100vw; height:100vh; background: rgba(0,0,0,0.9); color: white; z-index: 9999; justify-content: center; align-items: center; flex-direction: column; font-size: 1.5rem; }
-    @media screen and (max-width: 768px) and (orientation: portrait) {
-      #portrait-overlay { display: flex; }
+    * {
+      font-family: 'Fredoka', 'Noto Sans TC', sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
     }
 
-    /* Animations */
-    .hit-anim { animation: flashRed 0.3s ease; }
-    @keyframes flashRed { 0% { background: rgba(255,0,0,0.4); } 100% { background: var(--card-bg); } }
+    body {
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #311042 100%);
+      color: #f8fafc;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+
+    /* Screen Shake Animation */
+    .shake {
+      animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+    }
+    @keyframes shake {
+      10%, 90% { transform: translate3d(-2px, 0, 0); }
+      20%, 80% { transform: translate3d(4px, 0, 0); }
+      30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+      40%, 60% { transform: translate3d(6px, 0, 0); }
+    }
+
+    /* Attack Dash Animation */
+    .dash-right {
+      animation: dashRight 0.4s ease-in-out;
+    }
+    @keyframes dashRight {
+      0% { transform: translateX(0); }
+      50% { transform: translateX(80px) scale(1.1); }
+      100% { transform: translateX(0); }
+    }
+
+    .dash-left {
+      animation: dashLeft 0.4s ease-in-out;
+    }
+    @keyframes dashLeft {
+      0% { transform: translateX(0); }
+      50% { transform: translateX(-80px) scale(1.1); }
+      100% { transform: translateX(0); }
+    }
+
+    /* Pulse Beam */
+    .laser-beam {
+      position: absolute;
+      height: 8px;
+      background: linear-gradient(90deg, #38bdf8, #f43f5e);
+      box-shadow: 0 0 15px #38bdf8, 0 0 25px #f43f5e;
+      z-index: 50;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* Floating Feedback Text */
+    .floating-text {
+      position: absolute;
+      font-weight: 900;
+      font-size: 2rem;
+      animation: floatUp 0.8s ease-out forwards;
+      pointer-events: none;
+      z-index: 60;
+    }
+    @keyframes floatUp {
+      0% { opacity: 1; transform: translateY(0) scale(0.8); }
+      50% { transform: translateY(-30px) scale(1.2); }
+      100% { opacity: 0; transform: translateY(-60px) scale(1); }
+    }
+
+    /* Orientation Overlay for Mobile Portrait */
+    #orientation-overlay {
+      display: none;
+    }
+    @media screen and (max-width: 900px) and (orientation: portrait) {
+      #orientation-overlay {
+        display: flex !important;
+      }
+    }
   </style>
 </head>
-<body>
+<body class="flex flex-col items-center justify-center min-h-screen p-2 sm:p-4 relative">
 
-  <div class="watermark">你最愛的老師設計</div>
-
-  <div id="portrait-overlay">
-    <div>↻ 請將手機轉為橫向以繼續遊戲</div>
+  <!-- Fixed Signature -->
+  <div class="fixed top-2 right-3 text-xs text-indigo-300/60 font-medium z-50 pointer-events-none">
+    你最愛的老師設計
   </div>
 
-  <!-- Screen 1: Login -->
-  <div id="screen-login" class="screen active">
-    <h1>⚔️ 整數加減大對決</h1>
-    <p class="subtitle">7年級數學對戰平台</p>
-    <div>
-      <input type="text" id="input-nickname" placeholder="請輸入暱稱 (1~20字)" maxlength="20"><br>
-      <button id="btn-login">進入大廳</button>
-    </div>
-    <div id="connection-status" class="status-badge">資料庫連線中...</div>
+  <!-- Mobile Portrait Warning Overlay -->
+  <div id="orientation-overlay" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-[100] flex-col items-center justify-center text-center p-6 text-white">
+    <div class="text-6xl mb-4 animate-bounce">↻</div>
+    <h2 class="text-2xl font-bold mb-2">請將手機橫向放置</h2>
+    <p class="text-slate-400 text-sm">為了獲得最佳對戰體驗，建議轉至橫螢幕玩遊戲喔！</p>
   </div>
 
-  <!-- Screen 2: Lobby -->
-  <div id="screen-lobby" class="screen">
-    <h2>🎮 遊戲大廳</h2>
-    <p>歡迎，<span id="display-nickname" style="font-weight: bold; color: var(--primary);"></span>！</p>
-    <div style="margin: 15px 0;">
-      <button id="btn-create-room">+ 建立對戰房間</button>
-    </div>
-    <h3>等待中的房間</h3>
-    <div id="room-list" class="room-list">
-      <div style="text-align: center; color: #888;">正在載入房間清單...</div>
-    </div>
-  </div>
+  <!-- Main App Container -->
+  <main class="w-full max-w-5xl bg-slate-900/80 backdrop-blur-lg border border-slate-700/50 rounded-3xl shadow-2xl overflow-hidden relative min-h-[550px] flex flex-col justify-between">
+    
+    <!-- Toast Notification Banner -->
+    <div id="toast-container" class="absolute top-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none w-full max-w-md px-4 flex flex-col items-center gap-2"></div>
 
-  <!-- Screen 3: Waiting Room -->
-  <div id="screen-waiting" class="screen">
-    <h2>⏳ 等待對手加入...</h2>
-    <p style="margin: 20px 0; font-size: 1.2rem;">請稍候，準備戰鬥！</p>
-    <button id="btn-cancel-room" class="btn-danger">取消房間</button>
-  </div>
-
-  <!-- Screen 4: Battle -->
-  <div id="screen-battle" class="screen">
-    <div class="battle-hud">
-      <div class="player-card">
-        <div id="p1-avatar" class="avatar">🐱</div>
-        <div id="p1-name" class="player-name">我方</div>
-        <div style="font-size:0.8rem; color:#666;">得分: <span id="p1-score">0</span></div>
-        <div class="hp-bar-bg"><div id="p1-hp-bar" class="hp-bar-fill" style="width: 100%;"></div></div>
+    <!-- SCREEN 1: LOGIN / START SCREEN -->
+    <section id="screen-login" class="flex-1 flex flex-col items-center justify-center p-6 text-center">
+      <div class="inline-block p-4 bg-indigo-500/10 rounded-full mb-4 border border-indigo-500/20">
+        <span class="text-5xl">⚔️</span>
       </div>
-      <div class="vs-text">VS</div>
-      <div class="player-card">
-        <div id="p2-avatar" class="avatar">🐶</div>
-        <div id="p2-name" class="player-name">對手</div>
-        <div style="font-size:0.8rem; color:#666;">得分: <span id="p2-score">0</span></div>
-        <div class="hp-bar-bg"><div id="p2-hp-bar" class="hp-bar-fill" style="width: 100%;"></div></div>
+      <h1 class="text-4xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-indigo-300 to-rose-400 mb-2">
+        整數大決鬥
+      </h1>
+      <p class="text-slate-400 text-sm sm:text-base mb-8">七年級數學：正負整數加減法即時對戰</p>
+
+      <div class="w-full max-w-sm space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-300 text-left mb-1 uppercase tracking-wider">玩家暱稱</label>
+          <input type="text" id="nickname-input" maxlength="20" placeholder="輸入 1~20 字暱稱" 
+            class="w-full px-4 py-3 bg-slate-800/90 border border-slate-600 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/30 transition text-center font-bold">
+        </div>
+
+        <button id="btn-enter-lobby" class="w-full py-3.5 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 active:scale-95 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 transition duration-150 flex items-center justify-center gap-2">
+          <span>進入對戰大廳</span>
+          <i class="fa-solid fa-arrow-right"></i>
+        </button>
+
+        <div class="flex items-center justify-center gap-2 text-xs font-medium text-slate-400 pt-2">
+          <span id="db-status-dot" class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+          <span id="db-status-text">正在連線至資料庫...</span>
+        </div>
       </div>
+    </section>
+
+
+    <!-- SCREEN 2: LOBBY SCREEN -->
+    <section id="screen-lobby" class="hidden flex-1 flex flex-col p-4 sm:p-6">
+      <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-700/60 mb-6">
+        <div>
+          <span class="text-xs text-slate-400 font-bold block">目前登入</span>
+          <span id="lobby-player-name" class="text-lg font-black text-indigo-300">---</span>
+        </div>
+        <button id="btn-create-room" class="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-bold rounded-xl shadow-lg shadow-emerald-500/20 transition flex items-center gap-2 text-sm">
+          <i class="fa-solid fa-plus"></i>
+          <span>建立對戰房間</span>
+        </button>
+      </div>
+
+      <div class="flex-1 flex flex-col">
+        <h2 class="text-sm font-bold text-slate-300 uppercase tracking-wider mb-3 flex items-center gap-2">
+          <i class="fa-solid fa-list-ul text-indigo-400"></i>
+          <span>等待對戰的房間列表</span>
+        </h2>
+
+        <div id="room-list-container" class="grid grid-cols-1 sm:grid-cols-2 gap-3 overflow-y-auto max-h-[300px] p-1">
+          <!-- Room items injected dynamically -->
+        </div>
+
+        <div id="no-rooms-notice" class="hidden flex-1 flex flex-col items-center justify-center text-slate-500 py-12">
+          <i class="fa-solid fa-ghost text-4xl mb-2 text-slate-600"></i>
+          <p class="text-sm font-medium">目前沒有等待中的房間，快來建立一個吧！</p>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- SCREEN 3: WAITING ROOM SCREEN -->
+    <section id="screen-waiting" class="hidden flex-1 flex flex-col items-center justify-center p-6 text-center">
+      <div class="relative mb-6">
+        <div class="w-20 h-20 rounded-full border-4 border-indigo-500/30 border-t-indigo-400 animate-spin flex items-center justify-center"></div>
+        <div class="absolute inset-0 flex items-center justify-center text-2xl">🎮</div>
+      </div>
+      <h2 class="text-2xl font-black text-white mb-1">正在等待對手加入...</h2>
+      <p class="text-slate-400 text-sm mb-8">對手加入後將會自動開啟遊戲</p>
+
+      <button id="btn-cancel-room" class="px-6 py-2.5 bg-rose-500/20 border border-rose-500/40 hover:bg-rose-500/30 text-rose-300 font-bold rounded-xl transition active:scale-95 text-sm">
+        取消房間並返回大廳
+      </button>
+    </section>
+
+
+    <!-- SCREEN 4: BATTLE SCREEN -->
+    <section id="screen-battle" class="hidden flex-1 flex flex-col justify-between p-3 sm:p-5 relative overflow-hidden select-none">
+      
+      <!-- Battle HUD -->
+      <div class="grid grid-cols-7 items-center bg-slate-800/80 rounded-2xl p-3 border border-slate-700/60 shadow-inner gap-2">
+        <!-- Player 1 (Me) -->
+        <div class="col-span-3 flex items-center gap-3">
+          <div id="p1-avatar" class="text-3xl sm:text-4xl bg-slate-700/60 p-1.5 sm:p-2 rounded-xl transition transform">🐱</div>
+          <div class="flex-1 min-w-0">
+            <div id="p1-name" class="font-black text-sm sm:text-base text-indigo-300 truncate">我方</div>
+            <div class="flex items-center gap-1 mt-1">
+              <div class="flex-1 h-3.5 bg-slate-900 rounded-full overflow-hidden p-0.5 border border-slate-700">
+                <div id="p1-hp-bar" class="h-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full transition-all duration-300" style="width: 100%;"></div>
+              </div>
+              <span id="p1-hp-text" class="text-xs font-black text-emerald-400 w-8 text-right">7 HP</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- VS Badge -->
+        <div class="col-span-1 text-center">
+          <span class="px-2 py-1 bg-rose-500/20 text-rose-400 font-black text-xs sm:text-sm rounded-lg border border-rose-500/30">VS</span>
+        </div>
+
+        <!-- Player 2 (Opponent) -->
+        <div class="col-span-3 flex items-center gap-3 flex-row-reverse text-right">
+          <div id="p2-avatar" class="text-3xl sm:text-4xl bg-slate-700/60 p-1.5 sm:p-2 rounded-xl transition transform">🐶</div>
+          <div class="flex-1 min-w-0">
+            <div id="p2-name" class="font-black text-sm sm:text-base text-rose-300 truncate">對手</div>
+            <div class="flex items-center gap-1 mt-1 flex-row-reverse">
+              <div class="flex-1 h-3.5 bg-slate-900 rounded-full overflow-hidden p-0.5 border border-slate-700">
+                <div id="p2-hp-bar" class="h-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full transition-all duration-300" style="width: 100%;"></div>
+              </div>
+              <span id="p2-hp-text" class="text-xs font-black text-emerald-400 w-8 text-left">7 HP</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Question Card Container -->
+      <div class="my-auto py-2">
+        <div class="bg-slate-800/90 border border-indigo-500/30 rounded-2xl p-4 sm:p-6 text-center shadow-xl relative">
+          <span class="text-xs font-bold text-indigo-400 uppercase tracking-widest block mb-1">計算題</span>
+          <div id="question-text" class="text-2xl sm:text-4xl font-black text-white tracking-wide my-2">
+            (-5) + 8 = ?
+          </div>
+        </div>
+
+        <!-- Answer Options Grid (A/B/C/D) -->
+        <div class="grid grid-cols-2 gap-3 mt-3">
+          <button class="btn-option p-3 sm:py-4 bg-slate-800 hover:bg-slate-700 active:bg-indigo-600 border border-slate-700 rounded-xl font-black text-lg sm:text-xl text-white transition duration-100 flex items-center justify-center" data-idx="0">
+            A. 3
+          </button>
+          <button class="btn-option p-3 sm:py-4 bg-slate-800 hover:bg-slate-700 active:bg-indigo-600 border border-slate-700 rounded-xl font-black text-lg sm:text-xl text-white transition duration-100 flex items-center justify-center" data-idx="1">
+            B. -3
+          </button>
+          <button class="btn-option p-3 sm:py-4 bg-slate-800 hover:bg-slate-700 active:bg-indigo-600 border border-slate-700 rounded-xl font-black text-lg sm:text-xl text-white transition duration-100 flex items-center justify-center" data-idx="2">
+            C. 13
+          </button>
+          <button class="btn-option p-3 sm:py-4 bg-slate-800 hover:bg-slate-700 active:bg-indigo-600 border border-slate-700 rounded-xl font-black text-lg sm:text-xl text-white transition duration-100 flex items-center justify-center" data-idx="3">
+            D. -13
+          </button>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- SCREEN 5: GAME OVER OVERLAY -->
+    <div id="modal-result" class="hidden absolute inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex flex-col items-center justify-center p-6 text-center">
+      <div id="result-icon" class="text-7xl mb-2 animate-bounce">🏆</div>
+      <h2 id="result-title" class="text-4xl font-black text-yellow-400 mb-2">勝利！</h2>
+      <p id="result-desc" class="text-slate-300 text-base mb-6 max-w-md">你展現了無與倫比的數學對戰技巧！</p>
+
+      <button id="btn-return-lobby" class="px-8 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold rounded-xl shadow-lg transition active:scale-95">
+        回到遊戲大廳
+      </button>
     </div>
 
-    <div id="question-box" class="question-box">題目載入中...</div>
+  </main>
 
-    <div class="options-grid">
-      <button class="option-btn" onclick="handleAnswer(0)"></button>
-      <button class="option-btn" onclick="handleAnswer(1)"></button>
-      <button class="option-btn" onclick="handleAnswer(2)"></button>
-      <button class="option-btn" onclick="handleAnswer(3)"></button>
-    </div>
-  </div>
-
-  <!-- Screen 5: Result -->
-  <div id="screen-result" class="screen">
-    <h1 id="result-title">遊戲結束</h1>
-    <div id="result-avatar" style="font-size: 5rem; margin: 15px 0;">🏆</div>
-    <p id="result-desc" style="font-size: 1.3rem; margin-bottom: 25px;"></p>
-    <button id="btn-back-lobby">回到遊戲大廳</button>
-  </div>
-
+  <!-- JAVASCRIPT LOGIC -->
   <script>
-    // --- 1. CONFIG & SUPABASE INITIALIZATION ---
-    const SUPABASE_URL = 'https://hzuhttxyjzktgrwsrjht.supabase.co'[cite: 3];
-    const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_VazlOgnvYhsJ79FHzvPSWw_HleXyEhk'[cite: 3];
+    // =========================================================================
+    // 1. SUPABASE CONNECTION CONFIGURATION
+    // =========================================================================
+    const SUPABASE_URL = 'https://utcbxqhqgbkaoavfrnbe.supabase.co';
+    const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_5azc7FOASCij4AiiUAeudw_GlREosPc';
 
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+      realtime: { params: { eventsPerSecond: 10 } }
+    });
 
-    // --- 2. GLOBAL STATE ---
-    let clientToken = localStorage.getItem('sequence_battle_client_token')[cite: 3];
+    // =========================================================================
+    // 2. GLOBAL GAME STATE VARIABLES
+    // =========================================================================
+    const AVATARS = ['🐱', '🐶', '🐰', '🐻', '🦊', '🐼', '🐧', '🐸'];
+    
+    let clientToken = localStorage.getItem('sequence_battle_client_token');
     if (!clientToken) {
       clientToken = crypto.randomUUID();
-      localStorage.setItem('sequence_battle_client_token', clientToken)[cite: 3];
+      localStorage.setItem('sequence_battle_client_token', clientToken);
     }
 
     let nickname = '';
+    let currentScreen = 'login';
     let currentRoomId = null;
     let currentSeat = null;
     let currentQuestion = null;
+    let lastProcessedEventId = null;
+    
+    let lobbyChannel = null;
     let gameChannel = null;
+    
     let heartbeatTimer = null;
-    let opponentDisconnectTimer = null;
+    let disconnectTimer = null;
     let opponentWasPresent = false;
-    let lastEventId = null;
 
-    const AVATARS = ['🐱', '🐶', '🐰', '🐻', '🦊', '🐼', '🐧', '🐸'];
-
-    // --- 3. DOM ELEMENTS ---
+    // =========================================================================
+    // 3. UI ELEMENT REFERENCES
+    // =========================================================================
     const screens = {
       login: document.getElementById('screen-login'),
       lobby: document.getElementById('screen-lobby'),
       waiting: document.getElementById('screen-waiting'),
-      battle: document.getElementById('screen-battle'),
-      result: document.getElementById('screen-result')
+      battle: document.getElementById('screen-battle')
     };
 
-    function showScreen(screenName) {
-      Object.keys(screens).forEach(s => screens[s].classList.remove('active'));
-      screens[screenName].classList.add('active');
+    const nicknameInput = document.getElementById('nickname-input');
+    const dbStatusDot = document.getElementById('db-status-dot');
+    const dbStatusText = document.getElementById('db-status-text');
+    const roomListContainer = document.getElementById('room-list-container');
+    const noRoomsNotice = document.getElementById('no-rooms-notice');
+    
+    const p1Avatar = document.getElementById('p1-avatar');
+    const p1Name = document.getElementById('p1-name');
+    const p1HpBar = document.getElementById('p1-hp-bar');
+    const p1HpText = document.getElementById('p1-hp-text');
+
+    const p2Avatar = document.getElementById('p2-avatar');
+    const p2Name = document.getElementById('p2-name');
+    const p2HpBar = document.getElementById('p2-hp-bar');
+    const p2HpText = document.getElementById('p2-hp-text');
+
+    const questionText = document.getElementById('question-text');
+    const optionBtns = document.querySelectorAll('.btn-option');
+    const resultModal = document.getElementById('modal-result');
+
+    // =========================================================================
+    // 4. RANDOM QUESTION GENERATOR (Math: Integers Addition & Subtraction)
+    // =========================================================================
+    function generateMathQuestion() {
+      const getRandomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+      
+      let a = getRandomInt(-15, 15);
+      let b = getRandomInt(-15, 15);
+      while (a === 0) a = getRandomInt(-15, 15);
+      while (b === 0) b = getRandomInt(-15, 15);
+
+      const isAddition = Math.random() > 0.5;
+      const opSymbol = isAddition ? '+' : '-';
+      
+      const formatNum = (num) => num < 0 ? `(${num})` : `${num}`;
+      const qText = `${formatNum(a)} ${opSymbol} ${formatNum(b)} = ?`;
+      
+      const correctAnswer = isAddition ? (a + b) : (a - b);
+      
+      const optionsSet = new Set([correctAnswer]);
+      while (optionsSet.size < 4) {
+        let fake = correctAnswer + getRandomInt(-5, 5);
+        if (fake !== correctAnswer) optionsSet.add(fake);
+      }
+
+      const options = Array.from(optionsSet).sort(() => Math.random() - 0.5);
+
+      return {
+        text: qText,
+        options: options,
+        correctIndex: options.indexOf(correctAnswer)
+      };
     }
 
-    // --- 4. INITIALIZATION ---
-    window.addEventListener('DOMContentLoaded', async () => {
-      // Test Supabase connection
-      const statusBadge = document.getElementById('connection-status');
-      try {
-        const { error } = await supabase.from('rooms').select('count', { count: 'exact', head: true });
-        if (!error) {
-          statusBadge.textContent = '資料庫已連接'[cite: 3];
-          statusBadge.classList.add('connected');
-        } else {
-          statusBadge.textContent = '連線異常，請重新整理';
-        }
-      } catch (e) {
-        statusBadge.textContent = '連線失敗';
-      }
-    });
+    function renderNextQuestion() {
+      currentQuestion = generateMathQuestion();
+      questionText.innerText = currentQuestion.text;
 
-    // Login Handler
-    document.getElementById('btn-login').addEventListener('click', () => {
-      const input = document.getElementById('input-nickname').value.trim();
-      if (!input || input.length > 20) {
-        alert('請輸入 1 至 20 字的暱稱');
+      optionBtns.forEach((btn, idx) => {
+        const labels = ['A', 'B', 'C', 'D'];
+        btn.innerText = `${labels[idx]}. ${currentQuestion.options[idx]}`;
+        btn.disabled = false;
+        btn.className = "btn-option p-3 sm:py-4 bg-slate-800 hover:bg-slate-700 active:bg-indigo-600 border border-slate-700 rounded-xl font-black text-lg sm:text-xl text-white transition duration-100 flex items-center justify-center";
+      });
+    }
+
+    // =========================================================================
+    // 5. NAVIGATION & SCREEN MANAGEMENT
+    // =========================================================================
+    function showScreen(screenName) {
+      currentScreen = screenName;
+      Object.keys(screens).forEach(key => {
+        if (key === screenName) {
+          screens[key].classList.remove('hidden');
+        } else {
+          screens[key].classList.add('hidden');
+        }
+      });
+      if (screenName !== 'battle') {
+        resultModal.classList.add('hidden');
+      }
+    }
+
+    function showToast(msg, isError = false) {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `px-4 py-2.5 rounded-xl text-sm font-bold shadow-lg transition duration-300 transform translate-y-[-10px] opacity-0 flex items-center gap-2 ${
+        isError ? 'bg-rose-600 text-white' : 'bg-indigo-600 text-white'
+      }`;
+      toast.innerHTML = `<i class="fa-solid ${isError ? 'fa-circle-exclamation' : 'fa-circle-info'}"></i><span>${msg}</span>`;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.classList.remove('translate-y-[-10px]', 'opacity-0');
+      }, 10);
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0');
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    // =========================================================================
+    // 6. INITIALIZATION & DATABASE CHECK
+    // =========================================================================
+    async function initDatabase() {
+      try {
+        const { error } = await supabaseClient.from('rooms').select('id').limit(1);
+        if (error && error.code !== 'PGRST116') throw error;
+        
+        dbStatusDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-400";
+        dbStatusText.innerText = "資料庫已連接";
+        dbStatusText.className = "text-emerald-400 font-bold";
+      } catch (err) {
+        console.error("Database connection error:", err);
+        dbStatusDot.className = "w-2.5 h-2.5 rounded-full bg-rose-500";
+        dbStatusText.innerText = "資料庫連線異常";
+        dbStatusText.className = "text-rose-400 font-bold";
+      }
+    }
+
+    // =========================================================================
+    // 7. LOBBY & ROOM MANAGEMENT
+    // =========================================================================
+    async function fetchLiveRooms() {
+      try {
+        const { data, error } = await supabaseClient.rpc('list_live_rooms');
+        if (error) throw error;
+        renderRoomList(data || []);
+      } catch (err) {
+        console.error("Error fetching live rooms:", err);
+      }
+    }
+
+    function renderRoomList(rooms) {
+      roomListContainer.innerHTML = '';
+      if (!rooms || rooms.length === 0) {
+        noRoomsNotice.classList.remove('hidden');
         return;
       }
-      nickname = input;
-      document.getElementById('display-nickname').textContent = nickname;
-      showScreen('lobby');
-      initLobby();
-    });
 
-    // --- 5. LOBBY LOGIC ---
-    let lobbyChannel = null;
+      noRoomsNotice.classList.add('hidden');
+      rooms.forEach(room => {
+        const card = document.createElement('div');
+        card.className = "p-4 bg-slate-800/80 border border-slate-700/80 rounded-2xl flex items-center justify-between shadow-md hover:border-indigo-500/50 transition";
+        card.innerHTML = `
+          <div>
+            <div class="font-black text-white text-base">${escapeHtml(room.host_nickname)} 的對戰房</div>
+            <div class="text-xs text-slate-400 mt-0.5">狀態: 等待中...</div>
+          </div>
+          <button onclick="handleJoinRoomAttempt('${room.id}')" class="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 active:scale-95 text-white font-bold rounded-xl text-xs shadow transition">
+            加入對戰
+          </button>
+        `;
+        roomListContainer.appendChild(card);
+      });
+    }
 
-    async function initLobby() {
-      fetchLiveRooms();
-      
-      if (lobbyChannel) supabase.removeChannel(lobbyChannel);
-      
-      lobbyChannel = supabase.channel('public:rooms')
+    function subscribeLobbyRealtime() {
+      if (lobbyChannel) supabaseClient.removeChannel(lobbyChannel);
+      lobbyChannel = supabaseClient.channel('public:rooms')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'rooms' }, () => {
-          fetchLiveRooms();
+          if (currentScreen === 'lobby') fetchLiveRooms();
         })
         .subscribe();
     }
 
-    async function fetchLiveRooms() {
-      const { data, error } = await supabase.rpc('list_live_rooms')[cite: 3];
-      const container = document.getElementById('room-list');
-      if (error || !data || data.length === 0) {
-        container.innerHTML = '<div style="text-align: center; color: #888;">目前沒有等待中的房間，快來建立一個吧！</div>';
-        return;
-      }
+    // =========================================================================
+    // 8. ROOM CREATION & HEARTBEAT (Seat 1)
+    // =========================================================================
+    async function handleCreateRoom() {
+      try {
+        const { data, error } = await supabaseClient.rpc('create_room', {
+          p_nickname: nickname,
+          p_client_token: clientToken
+        });
 
-      container.innerHTML = '';
-      data.forEach(room => {
-        const div = document.createElement('div');
-        div.className = 'room-item';
-        div.innerHTML = `
-          <div><strong>${escapeHtml(room.host_nickname)}</strong> 的房間</div>
-          <button onclick="attemptJoinRoom('${room.id}')">加入對戰</button>
-        `;
-        container.appendChild(div);
-      });
+        if (error) throw error;
+
+        currentRoomId = data.room_id;
+        currentSeat = 1;
+
+        showScreen('waiting');
+        startHeartbeat();
+        subscribeGameChannelAsHost();
+
+      } catch (err) {
+        console.error("Create room failed:", err);
+        showToast("建立房間失敗，請重試", true);
+      }
     }
-
-    // --- 6. CREATE & CANCEL ROOM ---
-    document.getElementById('btn-create-room').addEventListener('click', async () => {
-      const { data, error } = await supabase.rpc('create_room', {
-        p_nickname: nickname,
-        p_client_token: clientToken
-      })[cite: 3];
-
-      if (error) {
-        alert('建立房間失敗：' + error.message);
-        return;
-      }
-
-      currentRoomId = data.room_id;
-      currentSeat = 1;
-      showScreen('waiting');
-      startHeartbeat();
-      listenForGameStartHost();
-    });
-
-    document.getElementById('btn-cancel-room').addEventListener('click', async () => {
-      await supabase.rpc('cancel_room', {
-        p_room_id: currentRoomId,
-        p_client_token: clientToken
-      })[cite: 3];
-      cleanupRoomState();
-      showScreen('lobby');
-      fetchLiveRooms();
-    });
 
     function startHeartbeat() {
       stopHeartbeat();
       heartbeatTimer = setInterval(async () => {
-        if (currentRoomId && currentSeat === 1) {
-          await supabase.rpc('heartbeat_room', {
+        if (currentScreen === 'waiting' && currentSeat === 1 && currentRoomId) {
+          await supabaseClient.rpc('heartbeat_room', {
             p_room_id: currentRoomId,
             p_client_token: clientToken
-          })[cite: 3];
+          });
+        } else {
+          stopHeartbeat();
         }
       }, 3000);
     }
 
     function stopHeartbeat() {
-      if (heartbeatTimer) clearInterval(heartbeatTimer);
-      heartbeatTimer = null;
+      if (heartbeatTimer) {
+        clearInterval(heartbeatTimer);
+        heartbeatTimer = null;
+      }
     }
 
-    // Host listens for game state change to "playing" or probe
-    function listenForGameStartHost() {
-      if (gameChannel) supabase.removeChannel(gameChannel);
-
-      gameChannel = supabase.channel(`game-${currentRoomId}`)[cite: 3]
-        .on('broadcast', { event: 'join_probe' }, ({ payload }) => {
-          // Respond to Probe
-          gameChannel.send({
-            type: 'broadcast',
-            event: 'host_ack',
-            payload: { probe_id: payload.probe_id }
+    async function handleCancelRoom() {
+      if (currentRoomId) {
+        try {
+          await supabaseClient.rpc('cancel_room', {
+            p_room_id: currentRoomId,
+            p_client_token: clientToken
           });
+        } catch (err) {
+          console.error("Cancel room RPC error:", err);
+        }
+      }
+      cleanupRoomState();
+      showScreen('lobby');
+      fetchLiveRooms();
+    }
+
+    // Host listens for join probe
+    function subscribeGameChannelAsHost() {
+      if (gameChannel) supabaseClient.removeChannel(gameChannel);
+
+      gameChannel = supabaseClient.channel(`game-${currentRoomId}`, {
+        config: { presence: { key: clientToken } }
+      });
+
+      gameChannel
+        .on('broadcast', { event: 'join_probe' }, (payload) => {
+          if (currentScreen === 'waiting') {
+            gameChannel.send({
+              type: 'broadcast',
+              event: 'host_ack',
+              payload: { probe_id: payload.payload.probe_id }
+            });
+          }
         })
-        .on('postgres_changes', { 
-          event: 'UPDATE', 
-          schema: 'public', 
+        .on('postgres_changes', {
+          event: 'UPDATE',
+          schema: 'public',
           table: 'game_state',
           filter: `room_id=eq.${currentRoomId}`
         }, (payload) => {
           if (payload.new.status === 'playing') {
             stopHeartbeat();
-            setupBattle(payload.new);
+            setupBattleScreen(payload.new);
           }
         })
         .subscribe();
     }
 
-    // --- 7. JOIN ROOM (PROBE HANDSHAKE) ---
-    async function attemptJoinRoom(roomId) {
-      const probeChannel = supabase.channel(`game-${roomId}`)[cite: 3];
+    // =========================================================================
+    // 9. JOIN ROOM PROBE & HANDSHAKE (Seat 2)
+    // =========================================================================
+    async function handleJoinRoomAttempt(targetRoomId) {
       const probeId = crypto.randomUUID();
-      let ackReceived = false;
+      let hostAckReceived = false;
 
-      probeChannel.on('broadcast', { event: 'host_ack' }, ({ payload }) => {
-        if (payload.probe_id === probeId) {
-          ackReceived = true;
-        }
-      }).subscribe();
+      const tempChannel = supabaseClient.channel(`game-${targetRoomId}`);
 
-      // Wait a moment for subscription
-      await new Promise(r => setTimeout(r, 300));
+      tempChannel
+        .on('broadcast', { event: 'host_ack' }, (payload) => {
+          if (payload.payload.probe_id === probeId) {
+            hostAckReceived = true;
+          }
+        })
+        .subscribe(async (status) => {
+          if (status === 'SUBSCRIBED') {
+            tempChannel.send({
+              type: 'broadcast',
+              event: 'join_probe',
+              payload: { probe_id: probeId }
+            });
 
-      // Send Join Probe
-      probeChannel.send({
-        type: 'broadcast',
-        event: 'join_probe',
-        payload: { probe_id: probeId }
-      });
+            setTimeout(async () => {
+              supabaseClient.removeChannel(tempChannel);
 
-      // Wait 2000ms for Host ACK
-      await new Promise(r => setTimeout(r, 2000));
-      supabase.removeChannel(probeChannel);
+              if (hostAckReceived) {
+                try {
+                  const { data, error } = await supabaseClient.rpc('join_room', {
+                    p_room_id: targetRoomId,
+                    p_nickname: nickname,
+                    p_client_token: clientToken
+                  });
 
-      if (!ackReceived) {
-        alert('房主已離開，請選其他房間。')[cite: 3];
-        fetchLiveRooms();
-        return;
-      }
+                  if (error) throw error;
 
-      // Proceed to Join
-      const { data, error } = await supabase.rpc('join_room', {
-        p_room_id: roomId,
-        p_nickname: nickname,
-        p_client_token: clientToken
-      })[cite: 3];
+                  currentRoomId = targetRoomId;
+                  currentSeat = 2;
 
-      if (error) {
-        if (error.message.includes('HOST_OFFLINE')) {
-          alert('房主已離開，請選其他房間。')[cite: 3];
-        } else {
-          alert('無法加入房間：' + error.message);
-        }
-        fetchLiveRooms();
-        return;
-      }
+                  subscribeGameChannelForBattle();
 
-      currentRoomId = roomId;
-      currentSeat = 2;
-
-      // Fetch initial game state and start
-      const { data: gs } = await supabase.from('game_state').select('*').eq('room_id', roomId).single();
-      setupBattle(gs);
+                } catch (err) {
+                  console.error("Join room failed:", err);
+                  showToast(err.message === 'HOST_OFFLINE' ? "房主已離開，請選其他房間。" : "無法加入房間", true);
+                  fetchLiveRooms();
+                }
+              } else {
+                showToast("房主已離開，請選其他房間。", true);
+                fetchLiveRooms();
+              }
+            }, 1800);
+          }
+        });
     }
 
-    // --- 8. BATTLE SETUP & REALTIME ---
-    function setupBattle(initialState) {
-      showScreen('battle');
-      
-      // Setup deterministic avatars based on roomId
-      const seed = currentRoomId.replace(/-/g, '');
-      const idx1 = parseInt(seed.substring(0, 2), 16) % AVATARS.length;
-      let idx2 = parseInt(seed.substring(2, 4), 16) % AVATARS.length;
-      if (idx1 === idx2) idx2 = (idx2 + 1) % AVATARS.length;
+    // =========================================================================
+    // 10. BATTLE CHANNEL & PRESENCE DISCONNECT GUARD
+    // =========================================================================
+    function subscribeGameChannelForBattle() {
+      if (gameChannel) supabaseClient.removeChannel(gameChannel);
 
-      // Set Avatars and Names according to seat perspective (Left = Self, Right = Opponent)
-      if (currentSeat === 1) {
-        document.getElementById('p1-name').textContent = initialState.player1_name || nickname;
-        document.getElementById('p2-name').textContent = initialState.player2_name || '對手';
-        document.getElementById('p1-avatar').textContent = AVATARS[idx1];
-        document.getElementById('p2-avatar').textContent = AVATARS[idx2];
-      } else {
-        document.getElementById('p1-name').textContent = initialState.player2_name || nickname;
-        document.getElementById('p2-name').textContent = initialState.player1_name || '房主';
-        document.getElementById('p1-avatar').textContent = AVATARS[idx2];
-        document.getElementById('p2-avatar').textContent = AVATARS[idx1];
-      }
-
-      updateGameStateHUD(initialState);
-      generateNewQuestion();
-
-      // Subscribe to Playing Realtime Channel
-      if (gameChannel) supabase.removeChannel(gameChannel);
+      gameChannel = supabaseClient.channel(`game-${currentRoomId}`, {
+        config: { presence: { key: clientToken } }
+      });
 
       opponentWasPresent = false;
-      gameChannel = supabase.channel(`game-${currentRoomId}`, {
-        config: { presence: { key: clientToken } }
-      })[cite: 3]
-      .on('postgres_changes', { 
-        event: 'UPDATE', 
-        schema: 'public', 
-        table: 'game_state',
-        filter: `room_id=eq.${currentRoomId}`
-      }, (payload) => {
-        handleGameStateUpdate(payload.new);
-      })
-      .on('presence', { event: 'sync' }, () => {
-        const state = gameChannel.presenceState();
-        const tokens = Object.keys(state);
-        if (tokens.length >= 2) {
-          opponentWasPresent = true;
-          if (opponentDisconnectTimer) {
-            clearTimeout(opponentDisconnectTimer);
-            opponentDisconnectTimer = null;
+
+      gameChannel
+        .on('presence', { event: 'sync' }, () => {
+          const state = gameChannel.presenceState();
+          const presentTokens = Object.keys(state);
+
+          const opponentPresent = presentTokens.some(token => token !== clientToken);
+
+          if (opponentPresent) {
+            opponentWasPresent = true;
+            if (disconnectTimer) {
+              clearTimeout(disconnectTimer);
+              disconnectTimer = null;
+            }
+          } else if (opponentWasPresent && !disconnectTimer && currentScreen === 'battle') {
+            disconnectTimer = setTimeout(() => {
+              if (currentScreen === 'battle') {
+                showToast("對手已斷線", true);
+                renderGameOverUI(currentSeat === 1 ? 1 : 2, true);
+              }
+            }, 5000);
           }
-        } else if (opponentWasPresent && !opponentDisconnectTimer) {
-          // Grace Period of 5s
-          opponentDisconnectTimer = setTimeout(() => {
-            alert('對手已斷線！')[cite: 3];
-            endGameDisconnect();
-          }, 5000);
-        }
-      })
-      .subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') {
-          await gameChannel.track({ seat: currentSeat, nickname: nickname });
-        }
-      });
+        })
+        .on('postgres_changes', {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'game_state',
+          filter: `room_id=eq.${currentRoomId}`
+        }, (payload) => {
+          handleGameStateUpdate(payload.new);
+        })
+        .subscribe(async (status) => {
+          if (status === 'SUBSCRIBED') {
+            await gameChannel.track({
+              seat: currentSeat,
+              nickname: nickname
+            });
+
+            const { data } = await supabaseClient
+              .from('game_state')
+              .select('*')
+              .eq('room_id', currentRoomId)
+              .single();
+
+            if (data) setupBattleScreen(data);
+          }
+        });
     }
 
-    // --- 9. QUESTION GENERATOR (7th Grade Integer Addition/Subtraction) ---
-    function generateNewQuestion() {
-      // Generate random 1 or 2 digit integers
-      const getRandomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
-      
-      const num1 = getRandomInt(-20, 20);
-      const num2 = getRandomInt(-20, 20);
-      const isAddition = Math.random() > 0.5;
-      
-      let exprText = '';
-      let correctAns = 0;
+    // =========================================================================
+    // 11. BATTLE LOGIC & GAME STATE HANDLER
+    // =========================================================================
+    function setupBattleScreen(gameState) {
+      showScreen('battle');
 
-      if (isAddition) {
-        exprText = `${num1} + (${num2})`;
-        correctAns = num1 + num2;
+      // Seed deterministic avatar selection
+      const seed = currentRoomId.replace(/-/g, '');
+      const num1 = parseInt(seed.substring(0, 4), 16) % AVATARS.length;
+      let num2 = parseInt(seed.substring(4, 8), 16) % AVATARS.length;
+      if (num1 === num2) num2 = (num2 + 1) % AVATARS.length;
+
+      const p1Emoji = AVATARS[num1];
+      const p2Emoji = AVATARS[num2];
+
+      if (currentSeat === 1) {
+        p1Avatar.innerText = p1Emoji;
+        p1Name.innerText = `${gameState.player1_name || nickname} (我方)`;
+        p2Avatar.innerText = p2Emoji;
+        p2Name.innerText = `${gameState.player2_name || '對手'}`;
       } else {
-        exprText = `${num1} - (${num2})`;
-        correctAns = num1 - num2;
+        p1Avatar.innerText = p2Emoji;
+        p1Name.innerText = `${gameState.player2_name || nickname} (我方)`;
+        p2Avatar.innerText = p1Emoji;
+        p2Name.innerText = `${gameState.player1_name || '對手'}`;
       }
 
-      // Format neatly
-      exprText = exprText.replace(/\+\ \(\-/g, '+ (-').replace(/\-\ \(\-/g, '- (-');
-      
-      // Generate options
-      const optionsSet = new Set([correctAns]);
-      while (optionsSet.size < 4) {
-        const offset = getRandomInt(-5, 5);
-        if (offset !== 0) optionsSet.add(correctAns + offset);
-      }
-
-      const options = Array.from(optionsSet).sort(() => Math.random() - 0.5);
-
-      currentQuestion = {
-        text: exprText,
-        options: options,
-        correct: correctAns
-      };
-
-      // Render Question
-      document.getElementById('question-box').innerHTML = `\\(${currentQuestion.text} = ?\\)`;
-      if (window.MathJax) window.MathJax.typesetPromise();
-
-      const btnNodes = document.querySelectorAll('.option-btn');
-      options.forEach((opt, idx) => {
-        btnNodes[idx].textContent = opt;
-      });
-    }
-
-    // --- 10. ANSWER HANDLING & GAME LOGIC ---
-    async function handleAnswer(selectedIndex) {
-      if (!currentQuestion) return;
-      
-      const chosen = currentQuestion.options[selectedIndex];
-      const isCorrect = chosen === currentQuestion.correct;
-
-      generateNewQuestion(); // Instantly change question for smoothness
-
-      await supabase.rpc('resolve_answer', {
-        p_room_id: currentRoomId,
-        p_client_token: clientToken,
-        p_is_correct: isCorrect
-      })[cite: 3];
+      renderNextQuestion();
+      handleGameStateUpdate(gameState);
     }
 
     function handleGameStateUpdate(gs) {
-      updateGameStateHUD(gs);
+      let myHp, oppHp;
+      if (currentSeat === 1) {
+        myHp = gs.player1_hp;
+        oppHp = gs.player2_hp;
+      } else {
+        myHp = gs.player2_hp;
+        oppHp = gs.player1_hp;
+      }
 
-      // Event Animation Flash
-      if (gs.last_event_id && gs.last_event_id !== lastEventId) {
-        lastEventId = gs.last_event_id;
-        triggerHitAnimation();
+      // Update HP Bars
+      p1HpBar.style.width = `${(myHp / 7) * 100}%`;
+      p1HpText.innerText = `${myHp} HP`;
+      p2HpBar.style.width = `${(oppHp / 7) * 100}%`;
+      p2HpText.innerText = `${oppHp} HP`;
+
+      // Trigger Animations for Last Event
+      if (gs.last_event_id && gs.last_event_id !== lastProcessedEventId) {
+        lastProcessedEventId = gs.last_event_id;
+        triggerAttackAnimation(gs.last_event_seat, gs.last_event_type);
       }
 
       // Check Game Over
       if (gs.status === 'finished') {
-        const isWinner = (gs.winner_seat === currentSeat);
-        showResult(isWinner);
+        renderGameOverUI(gs.winner_seat);
       }
     }
 
-    function updateGameStateHUD(gs) {
-      let myHp = currentSeat === 1 ? gs.player1_hp : gs.player2_hp;
-      let oppHp = currentSeat === 1 ? gs.player2_hp : gs.player1_hp;
-      let myScore = currentSeat === 1 ? gs.player1_score : gs.player2_score;
-      let oppScore = currentSeat === 1 ? gs.player2_score : gs.player1_score;
+    async function submitAnswer(isCorrect, selectedBtn) {
+      optionBtns.forEach(btn => btn.disabled = true);
 
-      document.getElementById('p1-hp-bar').style.width = `${(myHp / 7) * 100}%`;
-      document.getElementById('p2-hp-bar').style.width = `${(oppHp / 7) * 100}%`;
-      document.getElementById('p1-score').textContent = myScore;
-      document.getElementById('p2-score').textContent = oppScore;
+      if (isCorrect) {
+        selectedBtn.className = "btn-option p-3 sm:py-4 bg-emerald-600 border border-emerald-400 rounded-xl font-black text-lg sm:text-xl text-white flex items-center justify-center";
+        showFloatingText("答對！💥", selectedBtn, "text-emerald-400");
+      } else {
+        selectedBtn.className = "btn-option p-3 sm:py-4 bg-rose-600 border border-rose-400 rounded-xl font-black text-lg sm:text-xl text-white flex items-center justify-center";
+        showFloatingText("差一點！再試一次", selectedBtn, "text-rose-400");
+      }
+
+      try {
+        await supabaseClient.rpc('resolve_answer', {
+          p_room_id: currentRoomId,
+          p_client_token: clientToken,
+          p_is_correct: isCorrect
+        });
+      } catch (err) {
+        console.error("Resolve answer error:", err);
+      }
+
+      setTimeout(() => {
+        if (currentScreen === 'battle') {
+          renderNextQuestion();
+        }
+      }, 1000);
     }
 
-    function triggerHitAnimation() {
-      const card = screens.battle;
-      card.classList.add('hit-anim');
-      setTimeout(() => card.classList.remove('hit-anim'), 300);
+    function triggerAttackAnimation(attackerSeat, eventType) {
+      const isMyAttack = attackerSeat === currentSeat;
+      const attackerAvatar = isMyAttack ? p1Avatar : p2Avatar;
+      const victimAvatar = isMyAttack ? p2Avatar : p1Avatar;
+
+      if (eventType === 'hit') {
+        attackerAvatar.classList.add(isMyAttack ? 'dash-right' : 'dash-left');
+        setTimeout(() => {
+          attackerAvatar.classList.remove('dash-right', 'dash-left');
+          victimAvatar.classList.add('shake');
+          setTimeout(() => victimAvatar.classList.remove('shake'), 500);
+        }, 200);
+      } else if (eventType === 'self_hit') {
+        attackerAvatar.classList.add('shake');
+        setTimeout(() => attackerAvatar.classList.remove('shake'), 500);
+      }
     }
 
-    // --- 11. RESULT & DISCONNECT LOGIC ---
-    function showResult(isWinner) {
-      showScreen('result');
-      const title = document.getElementById('result-title');
-      const desc = document.getElementById('result-desc');
-      const avatar = document.getElementById('result-avatar');
+    function showFloatingText(text, element, colorClass) {
+      const rect = element.getBoundingClientRect();
+      const floatEl = document.createElement('div');
+      floatEl.className = `floating-text ${colorClass}`;
+      floatEl.innerText = text;
+      floatEl.style.left = `${rect.left + rect.width / 2 - 40}px`;
+      floatEl.style.top = `${rect.top - 20}px`;
+      document.body.appendChild(floatEl);
+
+      setTimeout(() => floatEl.remove(), 800);
+    }
+
+    function renderGameOverUI(winnerSeat, isOpponentDisconnected = false) {
+      resultModal.classList.remove('hidden');
+      const isWinner = winnerSeat === currentSeat;
+
+      const titleEl = document.getElementById('result-title');
+      const descEl = document.getElementById('result-desc');
+      const iconEl = document.getElementById('result-icon');
 
       if (isWinner) {
-        title.textContent = '🎉 勝利！';
-        title.style.color = '#38a169';
-        avatar.textContent = '🏆';
-        desc.textContent = '太厲害了！你成功戰勝了對手！';
+        iconEl.innerText = '🏆';
+        titleEl.innerText = '榮耀勝利！';
+        titleEl.className = 'text-4xl font-black text-yellow-400 mb-2';
+        descEl.innerText = isOpponentDisconnected ? '對手已斷線，判定你獲得勝利！' : '太棒了！你的整數加減計算能力技壓群雄！';
+        
+        confetti({
+          particleCount: 120,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
       } else {
-        title.textContent = '💪 再接再厲！';
-        title.style.color = '#e53e3e';
-        avatar.textContent = '⭐';
-        desc.textContent = '差一點點，下次一定能贏回來！';
+        iconEl.innerText = '💪';
+        titleEl.innerText = '再接再厲！';
+        titleEl.className = 'text-4xl font-black text-indigo-300 mb-2';
+        descEl.innerText = '這次差了一點點，再練幾題下次一定能贏！';
       }
     }
 
-    function endGameDisconnect() {
-      showScreen('result');
-      document.getElementById('result-title').textContent = '⚠️ 對手已斷線';
-      document.getElementById('result-title').style.color = '#dd6b20';
-      document.getElementById('result-avatar').textContent = '🔌';
-      document.getElementById('result-desc').textContent = '因為對手離開了遊戲，對戰已終止。';
+    // =========================================================================
+    // 12. STATE CLEANUP & RESET
+    // =========================================================================
+    function cleanupRoomState() {
+      stopHeartbeat();
+      if (disconnectTimer) {
+        clearTimeout(disconnectTimer);
+        disconnectTimer = null;
+      }
+      if (gameChannel) {
+        supabaseClient.removeChannel(gameChannel);
+        gameChannel = null;
+      }
+      currentRoomId = null;
+      currentSeat = null;
+      opponentWasPresent = false;
+      lastProcessedEventId = null;
     }
 
-    document.getElementById('btn-back-lobby').addEventListener('click', () => {
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, (m) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+      })[m]);
+    }
+
+    // =========================================================================
+    // 13. EVENT LISTENERS
+    // =========================================================================
+    document.getElementById('btn-enter-lobby').addEventListener('click', () => {
+      const val = nicknameInput.value.trim();
+      if (!val || val.length < 1 || val.length > 20) {
+        showToast("請輸入 1~20 字暱稱", true);
+        return;
+      }
+      nickname = val;
+      document.getElementById('lobby-player-name').innerText = nickname;
+      showScreen('lobby');
+      fetchLiveRooms();
+      subscribeLobbyRealtime();
+    });
+
+    document.getElementById('btn-create-room').addEventListener('click', handleCreateRoom);
+    document.getElementById('btn-cancel-room').addEventListener('click', handleCancelRoom);
+
+    document.getElementById('btn-return-lobby').addEventListener('click', () => {
       cleanupRoomState();
       showScreen('lobby');
       fetchLiveRooms();
     });
 
-    function cleanupRoomState() {
-      stopHeartbeat();
-      if (opponentDisconnectTimer) clearTimeout(opponentDisconnectTimer);
-      opponentDisconnectTimer = null;
-      if (gameChannel) supabase.removeChannel(gameChannel);
-      gameChannel = null;
-      currentRoomId = null;
-      currentSeat = null;
-      opponentWasPresent = false;
-    }
+    optionBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const idx = parseInt(e.currentTarget.getAttribute('data-idx'));
+        const isCorrect = (idx === currentQuestion.correctIndex);
+        submitAnswer(isCorrect, e.currentTarget);
+      });
+    });
 
-    // Utilities
-    function escapeHtml(str) {
-      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    }
-
-    // Unload Page Handling
+    // Pagehide beacon for room host cancellation
     window.addEventListener('pagehide', () => {
-      if (currentRoomId && currentSeat === 1) {
-        // Attempt fast cancel on exit
-        navigator.sendBeacon && navigator.sendBeacon(
-          `${SUPABASE_URL}/rest/v1/rpc/cancel_room`,
-          JSON.stringify({ p_room_id: currentRoomId, p_client_token: clientToken })
-        );
+      if (currentScreen === 'waiting' && currentSeat === 1 && currentRoomId) {
+        const url = `${SUPABASE_URL}/rest/v1/rpc/cancel_room`;
+        const payload = JSON.stringify({
+          p_room_id: currentRoomId,
+          p_client_token: clientToken
+        });
+        fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_PUBLISHABLE_KEY,
+            'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`
+          },
+          body: payload,
+          keepalive: true
+        });
       }
     });
+
+    // Start App
+    initDatabase();
   </script>
 </body>
 </html>
