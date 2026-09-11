@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>整數大決鬥 - 七年級數學對戰</title>
+  <title>整數大決鬥 V1.1 - 七年級數學對戰</title>
   
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -60,17 +60,6 @@
       100% { transform: translateX(0); }
     }
 
-    /* Pulse Beam */
-    .laser-beam {
-      position: absolute;
-      height: 8px;
-      background: linear-gradient(90deg, #38bdf8, #f43f5e);
-      box-shadow: 0 0 15px #38bdf8, 0 0 25px #f43f5e;
-      z-index: 50;
-      opacity: 0;
-      pointer-events: none;
-    }
-
     /* Floating Feedback Text */
     .floating-text {
       position: absolute;
@@ -99,7 +88,12 @@
 </head>
 <body class="flex flex-col items-center justify-center min-h-screen p-2 sm:p-4 relative">
 
-  <!-- Fixed Signature -->
+  <!-- Version Tag on Top Left -->
+  <div class="fixed top-2 left-3 text-xs font-black text-amber-400 bg-amber-400/10 border border-amber-400/30 px-2 py-0.5 rounded-md z-50 pointer-events-none">
+    V1.1
+  </div>
+
+  <!-- Fixed Signature on Top Right -->
   <div class="fixed top-2 right-3 text-xs text-indigo-300/60 font-medium z-50 pointer-events-none">
     你最愛的老師設計
   </div>
@@ -146,7 +140,6 @@
       </div>
     </section>
 
-
     <!-- SCREEN 2: LOBBY SCREEN -->
     <section id="screen-lobby" class="hidden flex-1 flex flex-col p-4 sm:p-6">
       <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-700/60 mb-6">
@@ -177,7 +170,6 @@
       </div>
     </section>
 
-
     <!-- SCREEN 3: WAITING ROOM SCREEN -->
     <section id="screen-waiting" class="hidden flex-1 flex flex-col items-center justify-center p-6 text-center">
       <div class="relative mb-6">
@@ -191,7 +183,6 @@
         取消房間並返回大廳
       </button>
     </section>
-
 
     <!-- SCREEN 4: BATTLE SCREEN -->
     <section id="screen-battle" class="hidden flex-1 flex flex-col justify-between p-3 sm:p-5 relative overflow-hidden select-none">
@@ -549,7 +540,6 @@
       fetchLiveRooms();
     }
 
-    // Host listens for join probe
     function subscribeGameChannelAsHost() {
       if (gameChannel) supabaseClient.removeChannel(gameChannel);
 
@@ -697,12 +687,11 @@
     }
 
     // =========================================================================
-    // 11. BATTLE LOGIC & GAME STATE HANDLER
+    // 11. BATTLE LOGIC & GAME STATE HANDLER (EXPLICIT HP DEDUCTION FIX)
     // =========================================================================
     function setupBattleScreen(gameState) {
       showScreen('battle');
 
-      // Seed deterministic avatar selection
       const seed = currentRoomId.replace(/-/g, '');
       const num1 = parseInt(seed.substring(0, 4), 16) % AVATARS.length;
       let num2 = parseInt(seed.substring(4, 8), 16) % AVATARS.length;
@@ -738,9 +727,9 @@
       }
 
       // Update HP Bars
-      p1HpBar.style.width = `${(myHp / 7) * 100}%`;
+      p1HpBar.style.width = `${Math.max(0, (myHp / 7) * 100)}%`;
       p1HpText.innerText = `${myHp} HP`;
-      p2HpBar.style.width = `${(oppHp / 7) * 100}%`;
+      p2HpBar.style.width = `${Math.max(0, (oppHp / 7) * 100)}%`;
       p2HpText.innerText = `${oppHp} HP`;
 
       // Trigger Animations for Last Event
@@ -763,17 +752,30 @@
         showFloatingText("答對！💥", selectedBtn, "text-emerald-400");
       } else {
         selectedBtn.className = "btn-option p-3 sm:py-4 bg-rose-600 border border-rose-400 rounded-xl font-black text-lg sm:text-xl text-white flex items-center justify-center";
-        showFloatingText("差一點！再試一次", selectedBtn, "text-rose-400");
+        showFloatingText("差一點！扣 1 HP", selectedBtn, "text-rose-400");
       }
 
       try {
-        await supabaseClient.rpc('resolve_answer', {
+        // Enforce strict boolean type for RPC call
+        const { data, error } = await supabaseClient.rpc('resolve_answer', {
           p_room_id: currentRoomId,
           p_client_token: clientToken,
-          p_is_correct: isCorrect
+          p_is_correct: Boolean(isCorrect)
         });
+
+        if (error) {
+          console.error("Resolve answer RPC error:", error);
+        } else if (data) {
+          // Instantly sync local state returned by RPC
+          const { data: updatedGs } = await supabaseClient
+            .from('game_state')
+            .select('*')
+            .eq('room_id', currentRoomId)
+            .single();
+          if (updatedGs) handleGameStateUpdate(updatedGs);
+        }
       } catch (err) {
-        console.error("Resolve answer error:", err);
+        console.error("RPC Submission error:", err);
       }
 
       setTimeout(() => {
