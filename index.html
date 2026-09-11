@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>整數大決鬥 V1.2 - 七年級數學對戰</title>
+  <title>整數大決鬥 V1.2.1 - 七年級數學對戰</title>
   
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -90,7 +90,7 @@
 
   <!-- Version Tag on Top Left -->
   <div class="fixed top-2 left-3 text-xs font-black text-amber-400 bg-amber-400/10 border border-amber-400/30 px-2 py-0.5 rounded-md z-50 pointer-events-none">
-    V1.2
+    V1.2.1
   </div>
 
   <!-- Fixed Signature on Top Right -->
@@ -293,10 +293,9 @@
     let currentSeat = null; // 1 or 2
     let currentQuestion = null;
     
-    // Direct Realtime HP Tracker for V1.2
+    // Direct Realtime HP Tracker
     let myHp = 7;
     let opponentHp = 7;
-    let opponentName = '對手';
     
     let lobbyChannel = null;
     let gameChannel = null;
@@ -607,7 +606,7 @@
     }
 
     // =========================================================================
-    // 10. REALTIME GAME CHANNEL (V1.2 REFACTORED FOR DIRECT HP SYNC)
+    // 10. REALTIME GAME CHANNEL (V1.2.1 REFACTORED FOR FULL HANDSHAKE)
     // =========================================================================
     function subscribeGameChannel() {
       if (gameChannel) supabaseClient.removeChannel(gameChannel);
@@ -626,6 +625,27 @@
               event: 'host_ack',
               payload: { probe_id: payload.payload.probe_id }
             });
+          }
+        })
+        .on('broadcast', { event: 'player_joined' }, () => {
+          // Player 2 joined signal -> Host triggers game start for everyone
+          if (currentSeat === 1) {
+            gameChannel.send({
+              type: 'broadcast',
+              event: 'game_start',
+              payload: {}
+            });
+            if (currentScreen !== 'battle') {
+              stopHeartbeat();
+              startBattle();
+            }
+          }
+        })
+        .on('broadcast', { event: 'game_start' }, () => {
+          // Game start command received by both players
+          if (currentScreen !== 'battle') {
+            stopHeartbeat();
+            startBattle();
           }
         })
         .on('broadcast', { event: 'action_event' }, (payload) => {
@@ -658,26 +678,30 @@
             }, 5000);
           }
         })
-        .on('postgres_changes', {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'game_state',
-          filter: `room_id=eq.${currentRoomId}`
-        }, (payload) => {
-          if (payload.new.status === 'playing' && currentScreen === 'waiting') {
-            stopHeartbeat();
-            startBattle();
-          }
-        })
         .subscribe(async (status) => {
           if (status === 'SUBSCRIBED') {
             await gameChannel.track({ seat: currentSeat, nickname: nickname });
+
+            // Player 2 broadcasts join notification upon channel subscription
+            if (currentSeat === 2) {
+              gameChannel.send({
+                type: 'broadcast',
+                event: 'player_joined',
+                payload: { seat: 2 }
+              });
+              // Immediate fallback to start battle
+              setTimeout(() => {
+                if (currentScreen !== 'battle') {
+                  startBattle();
+                }
+              }, 500);
+            }
           }
         });
     }
 
     // =========================================================================
-    // 11. BATTLE ENGINE (V1.2 REALTIME CLIENT-SIDE SYNC)
+    // 11. BATTLE ENGINE (REALTIME SYNC)
     // =========================================================================
     function startBattle() {
       myHp = 7;
