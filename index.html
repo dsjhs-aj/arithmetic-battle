@@ -1,840 +1,609 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>正負整數大對決 - 7年級數學即時對戰</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Supabase JS SDK v2 -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Noto+Sans+TC:wght@400;700;900&display=swap');
-        
-        body {
-            font-family: 'Noto Sans TC', sans-serif;
-            user-select: none;
-            -webkit-user-select: none;
-            touch-action: manipulation;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>整數加減大對決 - 7年級數學對戰</title>
+  <!-- Supabase JS Client v2 CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- MathJax for Math Rendering -->
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <style>
+    :root {
+      --bg-color: #f0f4f8;
+      --card-bg: #ffffff;
+      --primary: #4a90e2;
+      --primary-hover: #357abd;
+      --secondary: #ff6b6b;
+      --accent: #f5a623;
+      --text-main: #333333;
+      --text-muted: #666666;
+      --border-radius: 12px;
+      --box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; }
+    body { background: var(--bg-color); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 10px; }
+    
+    .watermark { position: fixed; top: 10px; right: 15px; font-size: 0.8rem; color: #888; z-index: 1000; font-weight: bold; }
+    
+    .screen { display: none; width: 100%; max-width: 800px; background: var(--card-bg); padding: 20px; border-radius: var(--border-radius); box-shadow: var(--box-shadow); text-align: center; }
+    .screen.active { display: block; }
 
-        .font-game {
-            font-family: 'Fredoka One', 'Noto Sans TC', cursive;
-        }
+    /* Login & Lobby */
+    h1 { margin-bottom: 10px; color: var(--primary); }
+    .subtitle { color: var(--text-muted); margin-bottom: 20px; }
+    input[type="text"] { width: 80%; max-width: 300px; padding: 12px; font-size: 1.1rem; border: 2px solid #ccc; border-radius: 8px; margin-bottom: 15px; outline: none; text-align: center; }
+    input[type="text"]:focus { border-color: var(--primary); }
+    button { padding: 12px 24px; font-size: 1.1rem; font-weight: bold; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; transition: 0.2s; margin: 5px; }
+    button:hover { background: var(--primary-hover); }
+    button.btn-danger { background: var(--secondary); }
+    button.btn-danger:hover { background: #e05252; }
+    
+    .status-badge { font-size: 0.9rem; margin-top: 15px; padding: 5px 10px; display: inline-block; border-radius: 20px; background: #e2e8f0; }
+    .status-badge.connected { background: #e6fffa; color: #234e52; }
 
-        /* Screen orientation warning overlay */
-        @media screen and (max-width: 768px) and (orientation: portrait) {
-            #portrait-warning {
-                display: flex !important;
-            }
-        }
+    .room-list { margin: 20px 0; max-height: 250px; overflow-y: auto; text-align: left; border: 1px solid #eee; border-radius: 8px; padding: 10px; }
+    .room-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; }
+    .room-item:last-child { border-bottom: none; }
 
-        /* Custom shake animation */
-        @keyframes shake {
-            0%, 100% { transform: translate(0, 0) rotate(0deg); }
-            20% { transform: translate(-10px, 0) rotate(-3deg); }
-            40% { transform: translate(10px, 0) rotate(3deg); }
-            60% { transform: translate(-8px, 0) rotate(-2deg); }
-            80% { transform: translate(8px, 0) rotate(2deg); }
-        }
-        .animate-shake {
-            animation: shake 0.5s ease-in-out;
-        }
+    /* Battle Screen */
+    .battle-hud { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: #f8fafc; padding: 15px; border-radius: 8px; }
+    .player-card { display: flex; flex-direction: column; align-items: center; width: 35%; }
+    .avatar { font-size: 3rem; }
+    .player-name { font-weight: bold; margin: 5px 0; }
+    .hp-bar-bg { width: 100%; height: 16px; background: #e2e8f0; border-radius: 8px; overflow: hidden; margin-top: 5px; }
+    .hp-bar-fill { height: 100%; background: #48bb78; transition: width 0.3s ease; }
+    .vs-text { font-size: 1.5rem; font-weight: bold; color: var(--secondary); }
 
-        /* Custom laser flash effect */
-        @keyframes laser-flash {
-            0% { opacity: 0; transform: scale(0.5); }
-            50% { opacity: 1; transform: scale(1.2); }
-            100% { opacity: 0; transform: scale(1); }
-        }
-        .laser-effect {
-            animation: laser-flash 0.4s ease-out forwards;
-        }
+    .question-box { font-size: 2rem; margin: 25px 0; min-height: 80px; display: flex; justify-content: center; align-items: center; background: #edf2f7; border-radius: 8px; padding: 10px; }
+    .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    .option-btn { padding: 18px; font-size: 1.3rem; background: white; border: 2px solid var(--primary); color: var(--primary); border-radius: 8px; font-weight: bold; }
+    .option-btn:hover { background: var(--primary); color: white; }
 
-        /* Pulse glow */
-        .glow-effect {
-            box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
-        }
+    /* Orientation overlay for phones */
+    #portrait-overlay { display: none; position: fixed; top:0; left:0; width:100vw; height:100vh; background: rgba(0,0,0,0.9); color: white; z-index: 9999; justify-content: center; align-items: center; flex-direction: column; font-size: 1.5rem; }
+    @media screen and (max-width: 768px) and (orientation: portrait) {
+      #portrait-overlay { display: flex; }
+    }
 
-        /* Smooth tab transition */
-        .page-screen {
-            transition: opacity 0.25s ease-in-out;
-        }
-    </style>
+    /* Animations */
+    .hit-anim { animation: flashRed 0.3s ease; }
+    @keyframes flashRed { 0% { background: rgba(255,0,0,0.4); } 100% { background: var(--card-bg); } }
+  </style>
 </head>
-<body class="bg-slate-900 text-white min-h-screen overflow-x-hidden flex flex-col justify-between">
+<body>
 
-    <!-- Top Bar Header -->
-    <header class="w-full bg-slate-800/80 backdrop-blur border-b border-slate-700 px-4 py-2 flex justify-between items-center z-50">
-        <div class="flex items-center space-x-2">
-            <span class="text-2xl">⚔️</span>
-            <span class="font-bold text-lg text-amber-400 tracking-wider">七年級數學：正負數數值大對決</span>
-        </div>
-        <div class="flex items-center space-x-3 text-xs md:text-sm">
-            <div id="db-status-badge" class="flex items-center space-x-1 bg-red-950 text-red-400 px-2.5 py-1 rounded-full border border-red-800">
-                <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse" id="db-status-dot"></span>
-                <span id="db-status-text">資料庫連線中...</span>
-            </div>
-            <div class="text-slate-400 font-medium">東興鍾元杰設計</div>
-        </div>
-    </header>
+  <div class="watermark">你最愛的老師設計</div>
 
-    <!-- Portrait mode warning overlay for smartphones -->
-    <div id="portrait-warning" class="fixed inset-0 bg-slate-950/95 z-50 hidden flex-col items-center justify-center p-6 text-center">
-        <div class="text-6xl mb-4 animate-bounce">↻</div>
-        <h2 class="text-2xl font-bold text-amber-400 mb-2">請將手機轉為橫向</h2>
-        <p class="text-slate-300">為了獲得最佳雙人對戰體驗，請開啟螢幕旋轉並橫向持握手機。</p>
+  <div id="portrait-overlay">
+    <div>↻ 請將手機轉為橫向以繼續遊戲</div>
+  </div>
+
+  <!-- Screen 1: Login -->
+  <div id="screen-login" class="screen active">
+    <h1>⚔️ 整數加減大對決</h1>
+    <p class="subtitle">7年級數學對戰平台</p>
+    <div>
+      <input type="text" id="input-nickname" placeholder="請輸入暱稱 (1~20字)" maxlength="20"><br>
+      <button id="btn-login">進入大廳</button>
+    </div>
+    <div id="connection-status" class="status-badge">資料庫連線中...</div>
+  </div>
+
+  <!-- Screen 2: Lobby -->
+  <div id="screen-lobby" class="screen">
+    <h2>🎮 遊戲大廳</h2>
+    <p>歡迎，<span id="display-nickname" style="font-weight: bold; color: var(--primary);"></span>！</p>
+    <div style="margin: 15px 0;">
+      <button id="btn-create-room">+ 建立對戰房間</button>
+    </div>
+    <h3>等待中的房間</h3>
+    <div id="room-list" class="room-list">
+      <div style="text-align: center; color: #888;">正在載入房間清單...</div>
+    </div>
+  </div>
+
+  <!-- Screen 3: Waiting Room -->
+  <div id="screen-waiting" class="screen">
+    <h2>⏳ 等待對手加入...</h2>
+    <p style="margin: 20px 0; font-size: 1.2rem;">請稍候，準備戰鬥！</p>
+    <button id="btn-cancel-room" class="btn-danger">取消房間</button>
+  </div>
+
+  <!-- Screen 4: Battle -->
+  <div id="screen-battle" class="screen">
+    <div class="battle-hud">
+      <div class="player-card">
+        <div id="p1-avatar" class="avatar">🐱</div>
+        <div id="p1-name" class="player-name">我方</div>
+        <div style="font-size:0.8rem; color:#666;">得分: <span id="p1-score">0</span></div>
+        <div class="hp-bar-bg"><div id="p1-hp-bar" class="hp-bar-fill" style="width: 100%;"></div></div>
+      </div>
+      <div class="vs-text">VS</div>
+      <div class="player-card">
+        <div id="p2-avatar" class="avatar">🐶</div>
+        <div id="p2-name" class="player-name">對手</div>
+        <div style="font-size:0.8rem; color:#666;">得分: <span id="p2-score">0</span></div>
+        <div class="hp-bar-bg"><div id="p2-hp-bar" class="hp-bar-fill" style="width: 100%;"></div></div>
+      </div>
     </div>
 
-    <!-- MAIN CONTAINER -->
-    <main class="flex-1 flex flex-col items-center justify-center p-2 md:p-6 w-full max-w-6xl mx-auto relative">
+    <div id="question-box" class="question-box">題目載入中...</div>
 
-        <!-- 1. HOME SCREEN -->
-        <section id="screen-home" class="page-screen w-full max-w-md bg-slate-800 rounded-2xl p-6 md:p-8 shadow-2xl border border-slate-700 text-center my-auto">
-            <div class="w-20 h-20 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-amber-400/50">
-                <i class="fa-solid fa-calculator text-4xl text-amber-400"></i>
-            </div>
-            <h1 class="text-3xl font-extrabold text-amber-400 mb-2 font-game">整數加減擂台戰</h1>
-            <p class="text-slate-300 text-sm mb-6">歡迎挑戰七年級正負號運算！兩位玩家即時對戰，算得快又準才能擊敗對手！</p>
-            
-            <div class="space-y-4 text-left mb-6">
-                <div>
-                    <label class="block text-slate-300 text-xs font-bold mb-1 ml-1" for="nickname-input">輸入你的勇者暱稱 (1~20字)</label>
-                    <input type="text" id="nickname-input" maxlength="20" placeholder="例如：解題小達人" 
-                           class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/30 transition">
-                </div>
-            </div>
+    <div class="options-grid">
+      <button class="option-btn" onclick="handleAnswer(0)"></button>
+      <button class="option-btn" onclick="handleAnswer(1)"></button>
+      <button class="option-btn" onclick="handleAnswer(2)"></button>
+      <button class="option-btn" onclick="handleAnswer(3)"></button>
+    </div>
+  </div>
 
-            <button id="btn-enter-lobby" onclick="enterLobby()" class="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg transform active:scale-95 transition flex items-center justify-center space-x-2 text-lg">
-                <span>進入遊戲大廳</span>
-                <i class="fa-solid fa-arrow-right"></i>
-            </button>
-        </section>
+  <!-- Screen 5: Result -->
+  <div id="screen-result" class="screen">
+    <h1 id="result-title">遊戲結束</h1>
+    <div id="result-avatar" style="font-size: 5rem; margin: 15px 0;">🏆</div>
+    <p id="result-desc" style="font-size: 1.3rem; margin-bottom: 25px;"></p>
+    <button id="btn-back-lobby">回到遊戲大廳</button>
+  </div>
 
-        <!-- 2. LOBBY SCREEN -->
-        <section id="screen-lobby" class="page-screen w-full max-w-4xl bg-slate-800 rounded-2xl p-4 md:p-6 shadow-2xl border border-slate-700 hidden flex-col">
-            <div class="flex flex-col md:flex-row justify-between items-center gap-4 pb-4 border-b border-slate-700">
-                <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center text-lg font-bold">
-                        <i class="fa-solid fa-user"></i>
-                    </div>
-                    <div>
-                        <div class="text-xs text-slate-400">當前玩家</div>
-                        <div id="lobby-user-name" class="font-bold text-amber-300">未知玩家</div>
-                    </div>
-                </div>
+  <script>
+    // --- 1. CONFIG & SUPABASE INITIALIZATION ---
+    const SUPABASE_URL = 'https://hzuhttxyjzktgrwsrjht.supabase.co'[cite: 3];
+    const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_VazlOgnvYhsJ79FHzvPSWw_HleXyEhk'[cite: 3];
 
-                <div class="flex space-x-2 w-full md:w-auto">
-                    <button onclick="fetchRoomList()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-4 py-2.5 rounded-xl font-medium transition flex items-center justify-center space-x-2 text-sm">
-                        <i class="fa-solid fa-arrows-rotate"></i>
-                        <span>重新整理</span>
-                    </button>
-                    <button onclick="handleCreateRoom()" class="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl font-bold shadow transition flex items-center justify-center space-x-2 text-sm">
-                        <i class="fa-solid fa-plus"></i>
-                        <span>建立對戰房間</span>
-                    </button>
-                </div>
-            </div>
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
-            <!-- Waiting Rooms List -->
-            <div class="mt-4 flex-1">
-                <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center space-x-2">
-                    <i class="fa-solid fa-gamepad text-emerald-400"></i>
-                    <span>等待中的房間列表</span>
-                </h3>
+    // --- 2. GLOBAL STATE ---
+    let clientToken = localStorage.getItem('sequence_battle_client_token')[cite: 3];
+    if (!clientToken) {
+      clientToken = crypto.randomUUID();
+      localStorage.setItem('sequence_battle_client_token', clientToken)[cite: 3];
+    }
 
-                <div id="room-list-container" class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[380px] overflow-y-auto pr-1">
-                    <!-- Dynamic room cards rendered here -->
-                    <div class="col-span-full py-12 text-center text-slate-500">
-                        <i class="fa-solid fa-spinner animate-spin text-2xl mb-2"></i>
-                        <p>正在載入對戰房間...</p>
-                    </div>
-                </div>
-            </div>
-        </section>
+    let nickname = '';
+    let currentRoomId = null;
+    let currentSeat = null;
+    let currentQuestion = null;
+    let gameChannel = null;
+    let heartbeatTimer = null;
+    let opponentDisconnectTimer = null;
+    let opponentWasPresent = false;
+    let lastEventId = null;
 
-        <!-- 3. WAITING ROOM SCREEN -->
-        <section id="screen-waiting" class="page-screen w-full max-w-md bg-slate-800 rounded-2xl p-8 shadow-2xl border border-slate-700 text-center hidden my-auto">
-            <div class="relative w-24 h-24 mx-auto mb-6 flex items-center justify-center">
-                <div class="absolute inset-0 rounded-full border-4 border-amber-400/20 border-t-amber-400 animate-spin"></div>
-                <i class="fa-solid fa-hourglass-half text-3xl text-amber-400 animate-pulse"></i>
-            </div>
-            
-            <h2 class="text-2xl font-bold text-white mb-2">等待對手加入中...</h2>
-            <p class="text-slate-400 text-sm mb-6">房間已建立，請通知同學選取您的房間加入對戰！</p>
+    const AVATARS = ['🐱', '🐶', '🐰', '🐻', '🦊', '🐼', '🐧', '🐸'];
 
-            <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-700/60 mb-6">
-                <span class="text-xs text-slate-400 block mb-1">房主暱稱</span>
-                <span id="waiting-host-name" class="text-lg font-bold text-amber-300">--</span>
-            </div>
+    // --- 3. DOM ELEMENTS ---
+    const screens = {
+      login: document.getElementById('screen-login'),
+      lobby: document.getElementById('screen-lobby'),
+      waiting: document.getElementById('screen-waiting'),
+      battle: document.getElementById('screen-battle'),
+      result: document.getElementById('screen-result')
+    };
 
-            <button onclick="handleCancelRoom()" class="w-full bg-rose-600/80 hover:bg-rose-600 text-white font-bold py-3 px-6 rounded-xl transition flex items-center justify-center space-x-2">
-                <i class="fa-solid fa-xmark"></i>
-                <span>取消房間並返回</span>
-            </button>
-        </section>
+    function showScreen(screenName) {
+      Object.keys(screens).forEach(s => screens[s].classList.remove('active'));
+      screens[screenName].classList.add('active');
+    }
 
-        <!-- 4. BATTLE SCREEN -->
-        <section id="screen-battle" class="page-screen w-full flex-col hidden my-auto">
-            <!-- HUD Player Bar -->
-            <div class="w-full bg-slate-800 rounded-2xl p-3 md:p-4 border border-slate-700 shadow-xl mb-4 flex items-center justify-between">
-                
-                <!-- My Info (Left) -->
-                <div class="flex items-center space-x-2 md:space-x-3 w-5/12">
-                    <div id="my-avatar" class="w-12 h-12 md:w-14 md:h-14 bg-indigo-600/40 rounded-2xl border-2 border-indigo-400 flex items-center justify-center text-2xl md:text-3xl shadow">
-                        🐶
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center justify-between">
-                            <span id="my-name-display" class="font-bold text-xs md:text-sm text-indigo-300 truncate">我方</span>
-                            <span id="my-score-display" class="text-xs text-amber-400 font-bold">0分</span>
-                        </div>
-                        <!-- Health Bar -->
-                        <div class="w-full bg-slate-950 h-3 md:h-4 rounded-full overflow-hidden border border-slate-700 mt-1">
-                            <div id="my-hp-bar" class="bg-gradient-to-r from-emerald-500 to-teal-400 h-full w-full transition-all duration-300"></div>
-                        </div>
-                        <div id="my-hp-text" class="text-[10px] md:text-xs text-right text-slate-400 mt-0.5">7 / 7 HP</div>
-                    </div>
-                </div>
-
-                <!-- VS Badge -->
-                <div class="w-2/12 text-center font-game text-xl md:text-3xl font-black text-amber-400 italic drop-shadow-lg">
-                    VS
-                </div>
-
-                <!-- Opponent Info (Right) -->
-                <div class="flex items-center space-x-2 md:space-x-3 w-5/12 flex-row-reverse space-x-reverse">
-                    <div id="opp-avatar" class="w-12 h-12 md:w-14 md:h-14 bg-rose-600/40 rounded-2xl border-2 border-rose-400 flex items-center justify-center text-2xl md:text-3xl shadow">
-                        🐱
-                    </div>
-                    <div class="flex-1 min-w-0 text-right">
-                        <div class="flex items-center justify-between flex-row-reverse">
-                            <span id="opp-name-display" class="font-bold text-xs md:text-sm text-rose-300 truncate">對手</span>
-                            <span id="opp-score-display" class="text-xs text-amber-400 font-bold">0分</span>
-                        </div>
-                        <!-- Health Bar -->
-                        <div class="w-full bg-slate-950 h-3 md:h-4 rounded-full overflow-hidden border border-slate-700 mt-1 dir-rtl">
-                            <div id="opp-hp-bar" class="bg-gradient-to-r from-emerald-500 to-teal-400 h-full w-full transition-all duration-300"></div>
-                        </div>
-                        <div id="opp-hp-text" class="text-[10px] md:text-xs text-left text-slate-400 mt-0.5">7 / 7 HP</div>
-                    </div>
-                </div>
-
-            </div>
-
-            <!-- Question Card & Options -->
-            <div id="question-card" class="relative bg-slate-800 rounded-2xl p-4 md:p-8 border border-slate-700 shadow-2xl flex flex-col justify-between min-h-[300px]">
-                
-                <!-- Feedback overlay animation -->
-                <div id="battle-feedback" class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm rounded-2xl z-20 hidden flex-col items-center justify-center pointer-events-none">
-                    <div id="feedback-icon" class="text-6xl mb-2">⚡</div>
-                    <div id="feedback-text" class="text-2xl font-black text-amber-400">答對！</div>
-                </div>
-
-                <!-- Question Prompt -->
-                <div class="text-center my-auto py-2">
-                    <span class="inline-block bg-slate-700 text-amber-300 text-xs px-3 py-1 rounded-full font-bold mb-3">請計算下列算式：</span>
-                    <div id="question-text" class="text-3xl md:text-5xl font-black text-white tracking-wide font-mono">
-                        (-5) + 12 = ?
-                    </div>
-                </div>
-
-                <!-- Choices 2x2 Grid -->
-                <div class="grid grid-cols-2 gap-3 md:gap-4 mt-6">
-                    <button onclick="submitAnswer(0)" class="option-btn bg-slate-700/80 hover:bg-slate-600 active:bg-amber-600 border-2 border-slate-600 hover:border-amber-400 text-white font-bold text-xl md:text-2xl py-4 md:py-6 rounded-xl shadow-lg transition transform active:scale-95 flex items-center justify-center">
-                        <span id="opt-0">A. 7</span>
-                    </button>
-                    <button onclick="submitAnswer(1)" class="option-btn bg-slate-700/80 hover:bg-slate-600 active:bg-amber-600 border-2 border-slate-600 hover:border-amber-400 text-white font-bold text-xl md:text-2xl py-4 md:py-6 rounded-xl shadow-lg transition transform active:scale-95 flex items-center justify-center">
-                        <span id="opt-1">B. -7</span>
-                    </button>
-                    <button onclick="submitAnswer(2)" class="option-btn bg-slate-700/80 hover:bg-slate-600 active:bg-amber-600 border-2 border-slate-600 hover:border-amber-400 text-white font-bold text-xl md:text-2xl py-4 md:py-6 rounded-xl shadow-lg transition transform active:scale-95 flex items-center justify-center">
-                        <span id="opt-2">C. 17</span>
-                    </button>
-                    <button onclick="submitAnswer(3)" class="option-btn bg-slate-700/80 hover:bg-slate-600 active:bg-amber-600 border-2 border-slate-600 hover:border-amber-400 text-white font-bold text-xl md:text-2xl py-4 md:py-6 rounded-xl shadow-lg transition transform active:scale-95 flex items-center justify-center">
-                        <span id="opt-3">D. -17</span>
-                    </button>
-                </div>
-            </div>
-        </section>
-
-        <!-- 5. GAME RESULT MODAL -->
-        <div id="modal-result" class="fixed inset-0 bg-slate-950/90 backdrop-blur z-50 hidden flex-col items-center justify-center p-6 text-center">
-            <div class="bg-slate-800 border border-slate-700 rounded-3xl p-8 max-w-md w-full shadow-2xl flex flex-col items-center transform scale-100">
-                <div id="result-emoji" class="text-7xl mb-4 animate-bounce">🏆</div>
-                <h2 id="result-title" class="text-3xl font-black text-amber-400 mb-2">獲得勝利！</h2>
-                <p id="result-desc" class="text-slate-300 mb-6">太厲害了！你的正負數計算精準快速！</p>
-                
-                <button onclick="leaveBattleToLobby()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg transform active:scale-95 transition">
-                    回到遊戲大廳
-                </button>
-            </div>
-        </div>
-
-    </main>
-
-    <script>
-        // --- MANDATORY SUPABASE CONSTANTS ---
-        const SUPABASE_URL = 'https://hzuhttxyjzktgrwsrjht.supabase.co';
-        const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_VazlOgnvYhsJ79FHzvPSWw_HleXyEhk';
-
-        // --- GLOBAL APP STATE ---
-        let supabaseClient = null;
-        let clientToken = '';
-        let userNickname = '';
-        
-        let currentRoomId = null;
-        let currentSeat = 0; // 1 = Host, 2 = Joiner
-        let currentQuestion = null;
-        
-        let lobbyChannel = null;
-        let gameChannel = null;
-        
-        let heartbeatTimer = null;
-        let disconnectTimer = null;
-        let opponentWasPresent = false;
-        
-        const ANIMAL_AVATARS = ['🐱', '🐶', '🐰', '🐻', '🦊', '🐼', '🐧', '🐸'];
-
-        document.addEventListener('DOMContentLoaded', () => {
-            initApp();
-        });
-
-        async function initApp() {
-            try {
-                // Initialize Supabase Client
-                supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
-                
-                // Update DB Status Badge
-                document.getElementById('db-status-badge').className = 'flex items-center space-x-1 bg-emerald-950 text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-800';
-                document.getElementById('db-status-dot').className = 'w-2 h-2 rounded-full bg-emerald-500 animate-pulse';
-                document.getElementById('db-status-text').innerText = '資料庫已連接';
-
-                // Get or Create Persistent Client Token
-                clientToken = localStorage.getItem('sequence_battle_client_token');
-                if (!clientToken) {
-                    clientToken = generateUUID();
-                    localStorage.setItem('sequence_battle_client_token', clientToken);
-                }
-
-                // Window Unload Pagehide Hook
-                window.addEventListener('pagehide', () => {
-                    if (currentRoomId && currentSeat === 1) {
-                        const url = `${SUPABASE_URL}/rest/v1/rpc/cancel_room`;
-                        const payload = JSON.stringify({ p_room_id: currentRoomId, p_client_token: clientToken });
-                        navigator.sendBeacon(url, payload);
-                    }
-                });
-
-            } catch (err) {
-                console.error("Supabase init error:", err);
-                document.getElementById('db-status-text').innerText = '連線失敗';
-            }
+    // --- 4. INITIALIZATION ---
+    window.addEventListener('DOMContentLoaded', async () => {
+      // Test Supabase connection
+      const statusBadge = document.getElementById('connection-status');
+      try {
+        const { error } = await supabase.from('rooms').select('count', { count: 'exact', head: true });
+        if (!error) {
+          statusBadge.textContent = '資料庫已連接'[cite: 3];
+          statusBadge.classList.add('connected');
+        } else {
+          statusBadge.textContent = '連線異常，請重新整理';
         }
+      } catch (e) {
+        statusBadge.textContent = '連線失敗';
+      }
+    });
 
-        // Helper: Helper UUID generator
-        function generateUUID() {
-            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-                const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
-                return v.toString(16);
-            });
+    // Login Handler
+    document.getElementById('btn-login').addEventListener('click', () => {
+      const input = document.getElementById('input-nickname').value.trim();
+      if (!input || input.length > 20) {
+        alert('請輸入 1 至 20 字的暱稱');
+        return;
+      }
+      nickname = input;
+      document.getElementById('display-nickname').textContent = nickname;
+      showScreen('lobby');
+      initLobby();
+    });
+
+    // --- 5. LOBBY LOGIC ---
+    let lobbyChannel = null;
+
+    async function initLobby() {
+      fetchLiveRooms();
+      
+      if (lobbyChannel) supabase.removeChannel(lobbyChannel);
+      
+      lobbyChannel = supabase.channel('public:rooms')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'rooms' }, () => {
+          fetchLiveRooms();
+        })
+        .subscribe();
+    }
+
+    async function fetchLiveRooms() {
+      const { data, error } = await supabase.rpc('list_live_rooms')[cite: 3];
+      const container = document.getElementById('room-list');
+      if (error || !data || data.length === 0) {
+        container.innerHTML = '<div style="text-align: center; color: #888;">目前沒有等待中的房間，快來建立一個吧！</div>';
+        return;
+      }
+
+      container.innerHTML = '';
+      data.forEach(room => {
+        const div = document.createElement('div');
+        div.className = 'room-item';
+        div.innerHTML = `
+          <div><strong>${escapeHtml(room.host_nickname)}</strong> 的房間</div>
+          <button onclick="attemptJoinRoom('${room.id}')">加入對戰</button>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    // --- 6. CREATE & CANCEL ROOM ---
+    document.getElementById('btn-create-room').addEventListener('click', async () => {
+      const { data, error } = await supabase.rpc('create_room', {
+        p_nickname: nickname,
+        p_client_token: clientToken
+      })[cite: 3];
+
+      if (error) {
+        alert('建立房間失敗：' + error.message);
+        return;
+      }
+
+      currentRoomId = data.room_id;
+      currentSeat = 1;
+      showScreen('waiting');
+      startHeartbeat();
+      listenForGameStartHost();
+    });
+
+    document.getElementById('btn-cancel-room').addEventListener('click', async () => {
+      await supabase.rpc('cancel_room', {
+        p_room_id: currentRoomId,
+        p_client_token: clientToken
+      })[cite: 3];
+      cleanupRoomState();
+      showScreen('lobby');
+      fetchLiveRooms();
+    });
+
+    function startHeartbeat() {
+      stopHeartbeat();
+      heartbeatTimer = setInterval(async () => {
+        if (currentRoomId && currentSeat === 1) {
+          await supabase.rpc('heartbeat_room', {
+            p_room_id: currentRoomId,
+            p_client_token: clientToken
+          })[cite: 3];
         }
+      }, 3000);
+    }
 
-        function showScreen(screenId) {
-            ['screen-home', 'screen-lobby', 'screen-waiting', 'screen-battle'].forEach(id => {
-                const el = document.getElementById(id);
-                if (id === screenId) {
-                    el.classList.remove('hidden');
-                    if (id === 'screen-lobby' || id === 'screen-battle') {
-                        el.classList.add('flex');
-                    }
-                } else {
-                    el.classList.add('hidden');
-                    el.classList.remove('flex');
-                }
-            });
-        }
+    function stopHeartbeat() {
+      if (heartbeatTimer) clearInterval(heartbeatTimer);
+      heartbeatTimer = null;
+    }
 
-        function enterLobby() {
-            const input = document.getElementById('nickname-input').value.trim();
-            if (!input || input.length < 1 || input.length > 20) {
-                alert('請輸入 1 至 20 個字元的勇者暱稱！');
-                return;
-            }
-            userNickname = input;
-            document.getElementById('lobby-user-name').innerText = userNickname;
-            
-            showScreen('screen-lobby');
-            subscribeLobbyRealtime();
-            fetchRoomList();
-        }
+    // Host listens for game state change to "playing" or probe
+    function listenForGameStartHost() {
+      if (gameChannel) supabase.removeChannel(gameChannel);
 
-        async function fetchRoomList() {
-            const container = document.getElementById('room-list-container');
-            container.innerHTML = `
-                <div class="col-span-full py-12 text-center text-slate-500">
-                    <i class="fa-solid fa-spinner animate-spin text-2xl mb-2"></i>
-                    <p>正在搜尋等待對戰的玩家...</p>
-                </div>
-            `;
-
-            try {
-                const { data, error } = await supabaseClient.rpc('list_live_rooms');
-                if (error) throw error;
-
-                if (!data || data.length === 0) {
-                    container.innerHTML = `
-                        <div class="col-span-full py-12 text-center text-slate-500 bg-slate-900/40 rounded-xl border border-dashed border-slate-700">
-                            <i class="fa-solid fa-ghost text-3xl mb-2 text-slate-600"></i>
-                            <p>目前沒有等待中的房間，快來建立一個吧！</p>
-                        </div>
-                    `;
-                    return;
-                }
-
-                container.innerHTML = '';
-                data.forEach(room => {
-                    const card = document.createElement('div');
-                    card.className = 'bg-slate-900/80 border border-slate-700 hover:border-amber-400/50 p-4 rounded-xl flex items-center justify-between shadow-md transition';
-                    card.innerHTML = `
-                        <div class="flex items-center space-x-3">
-                            <div class="w-10 h-10 bg-amber-500/20 text-amber-400 rounded-lg flex items-center justify-center font-bold">
-                                🏠
-                            </div>
-                            <div>
-                                <div class="font-bold text-white">${escapeHtml(room.host_nickname || '未知玩家')}</div>
-                                <div class="text-xs text-slate-400">房間狀態: 等待挑戰</div>
-                            </div>
-                        </div>
-                        <button onclick="handleJoinProbe('${room.room_id}')" class="bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 font-extrabold px-4 py-2 rounded-lg text-sm transition">
-                            加入對戰
-                        </button>
-                    `;
-                    container.appendChild(card);
-                });
-
-            } catch (err) {
-                console.error("Error fetching rooms:", err);
-                container.innerHTML = `<div class="col-span-full py-6 text-center text-rose-400">無法讀取房間清單，請稍後重試。</div>`;
-            }
-        }
-
-        function subscribeLobbyRealtime() {
-            if (lobbyChannel) return;
-            
-            lobbyChannel = supabaseClient
-                .channel('public:rooms')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'rooms' }, () => {
-                    fetchRoomList();
-                })
-                .subscribe();
-        }
-
-        async function handleCreateRoom() {
-            try {
-                const { data, error } = await supabaseClient.rpc('create_room', {
-                    p_nickname: userNickname,
-                    p_client_token: clientToken
-                });
-
-                if (error) throw error;
-
-                // RPC returns room_id string or object containing room_id
-                currentRoomId = (typeof data === 'object' && data !== null) ? (data.room_id || data.id) : data;
-                currentSeat = 1;
-
-                document.getElementById('waiting-host-name').innerText = userNickname;
-                showScreen('screen-waiting');
-
-                // Start Host Heartbeat
-                startHeartbeat();
-
-                // Connect Realtime Channel for Host Probe Listening
-                setupGameChannel(currentRoomId);
-
-            } catch (err) {
-                console.error("Create room error:", err);
-                alert("建立房間失敗: " + (err.message || '請確認網路連線'));
-            }
-        }
-
-        function startHeartbeat() {
+      gameChannel = supabase.channel(`game-${currentRoomId}`)[cite: 3]
+        .on('broadcast', { event: 'join_probe' }, ({ payload }) => {
+          // Respond to Probe
+          gameChannel.send({
+            type: 'broadcast',
+            event: 'host_ack',
+            payload: { probe_id: payload.probe_id }
+          });
+        })
+        .on('postgres_changes', { 
+          event: 'UPDATE', 
+          schema: 'public', 
+          table: 'game_state',
+          filter: `room_id=eq.${currentRoomId}`
+        }, (payload) => {
+          if (payload.new.status === 'playing') {
             stopHeartbeat();
-            heartbeatTimer = setInterval(async () => {
-                if (currentRoomId && currentSeat === 1) {
-                    await supabaseClient.rpc('heartbeat_room', {
-                        p_room_id: currentRoomId,
-                        p_client_token: clientToken
-                    });
-                }
-            }, 3000);
+            setupBattle(payload.new);
+          }
+        })
+        .subscribe();
+    }
+
+    // --- 7. JOIN ROOM (PROBE HANDSHAKE) ---
+    async function attemptJoinRoom(roomId) {
+      const probeChannel = supabase.channel(`game-${roomId}`)[cite: 3];
+      const probeId = crypto.randomUUID();
+      let ackReceived = false;
+
+      probeChannel.on('broadcast', { event: 'host_ack' }, ({ payload }) => {
+        if (payload.probe_id === probeId) {
+          ackReceived = true;
         }
+      }).subscribe();
 
-        function stopHeartbeat() {
-            if (heartbeatTimer) {
-                clearInterval(heartbeatTimer);
-                heartbeatTimer = null;
-            }
+      // Wait a moment for subscription
+      await new Promise(r => setTimeout(r, 300));
+
+      // Send Join Probe
+      probeChannel.send({
+        type: 'broadcast',
+        event: 'join_probe',
+        payload: { probe_id: probeId }
+      });
+
+      // Wait 2000ms for Host ACK
+      await new Promise(r => setTimeout(r, 2000));
+      supabase.removeChannel(probeChannel);
+
+      if (!ackReceived) {
+        alert('房主已離開，請選其他房間。')[cite: 3];
+        fetchLiveRooms();
+        return;
+      }
+
+      // Proceed to Join
+      const { data, error } = await supabase.rpc('join_room', {
+        p_room_id: roomId,
+        p_nickname: nickname,
+        p_client_token: clientToken
+      })[cite: 3];
+
+      if (error) {
+        if (error.message.includes('HOST_OFFLINE')) {
+          alert('房主已離開，請選其他房間。')[cite: 3];
+        } else {
+          alert('無法加入房間：' + error.message);
         }
+        fetchLiveRooms();
+        return;
+      }
 
-        async function handleCancelRoom() {
-            if (currentRoomId) {
-                await supabaseClient.rpc('cancel_room', {
-                    p_room_id: currentRoomId,
-                    p_client_token: clientToken
-                });
-            }
-            cleanupRoomState();
-            showScreen('screen-lobby');
-            fetchRoomList();
+      currentRoomId = roomId;
+      currentSeat = 2;
+
+      // Fetch initial game state and start
+      const { data: gs } = await supabase.from('game_state').select('*').eq('room_id', roomId).single();
+      setupBattle(gs);
+    }
+
+    // --- 8. BATTLE SETUP & REALTIME ---
+    function setupBattle(initialState) {
+      showScreen('battle');
+      
+      // Setup deterministic avatars based on roomId
+      const seed = currentRoomId.replace(/-/g, '');
+      const idx1 = parseInt(seed.substring(0, 2), 16) % AVATARS.length;
+      let idx2 = parseInt(seed.substring(2, 4), 16) % AVATARS.length;
+      if (idx1 === idx2) idx2 = (idx2 + 1) % AVATARS.length;
+
+      // Set Avatars and Names according to seat perspective (Left = Self, Right = Opponent)
+      if (currentSeat === 1) {
+        document.getElementById('p1-name').textContent = initialState.player1_name || nickname;
+        document.getElementById('p2-name').textContent = initialState.player2_name || '對手';
+        document.getElementById('p1-avatar').textContent = AVATARS[idx1];
+        document.getElementById('p2-avatar').textContent = AVATARS[idx2];
+      } else {
+        document.getElementById('p1-name').textContent = initialState.player2_name || nickname;
+        document.getElementById('p2-name').textContent = initialState.player1_name || '房主';
+        document.getElementById('p1-avatar').textContent = AVATARS[idx2];
+        document.getElementById('p2-avatar').textContent = AVATARS[idx1];
+      }
+
+      updateGameStateHUD(initialState);
+      generateNewQuestion();
+
+      // Subscribe to Playing Realtime Channel
+      if (gameChannel) supabase.removeChannel(gameChannel);
+
+      opponentWasPresent = false;
+      gameChannel = supabase.channel(`game-${currentRoomId}`, {
+        config: { presence: { key: clientToken } }
+      })[cite: 3]
+      .on('postgres_changes', { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'game_state',
+        filter: `room_id=eq.${currentRoomId}`
+      }, (payload) => {
+        handleGameStateUpdate(payload.new);
+      })
+      .on('presence', { event: 'sync' }, () => {
+        const state = gameChannel.presenceState();
+        const tokens = Object.keys(state);
+        if (tokens.length >= 2) {
+          opponentWasPresent = true;
+          if (opponentDisconnectTimer) {
+            clearTimeout(opponentDisconnectTimer);
+            opponentDisconnectTimer = null;
+          }
+        } else if (opponentWasPresent && !opponentDisconnectTimer) {
+          // Grace Period of 5s
+          opponentDisconnectTimer = setTimeout(() => {
+            alert('對手已斷線！')[cite: 3];
+            endGameDisconnect();
+          }, 5000);
         }
-
-        async function handleJoinProbe(roomId) {
-            const tempChannel = supabaseClient.channel(`game-${roomId}`);
-            const probeId = generateUUID();
-            let hostAckReceived = false;
-
-            tempChannel.on('broadcast', { event: 'host_ack' }, (payload) => {
-                if (payload.payload && payload.payload.probe_id === probeId) {
-                    hostAckReceived = true;
-                }
-            });
-
-            await tempChannel.subscribe();
-            
-            // Broadcast join_probe to check if host is active
-            await tempChannel.send({
-                type: 'broadcast',
-                event: 'join_probe',
-                payload: { probe_id: probeId }
-            });
-
-            // Wait 2000 ms for Host ACK
-            setTimeout(async () => {
-                supabaseClient.removeChannel(tempChannel);
-
-                if (hostAckReceived) {
-                    // Host acknowledged -> Proceed to join_room RPC
-                    executeJoinRoom(roomId);
-                } else {
-                    alert('房主已離開，請選其他房間。');
-                    fetchRoomList();
-                }
-            }, 2000);
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await gameChannel.track({ seat: currentSeat, nickname: nickname });
         }
+      });
+    }
 
-        async function executeJoinRoom(roomId) {
-            try {
-                const { data, error } = await supabaseClient.rpc('join_room', {
-                    p_room_id: roomId,
-                    p_nickname: userNickname,
-                    p_client_token: clientToken
-                });
+    // --- 9. QUESTION GENERATOR (7th Grade Integer Addition/Subtraction) ---
+    function generateNewQuestion() {
+      // Generate random 1 or 2 digit integers
+      const getRandomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+      
+      const num1 = getRandomInt(-20, 20);
+      const num2 = getRandomInt(-20, 20);
+      const isAddition = Math.random() > 0.5;
+      
+      let exprText = '';
+      let correctAns = 0;
 
-                if (error) {
-                    if (error.message.includes('ROOM_ALREADY_FULL')) alert('房間已滿！');
-                    else if (error.message.includes('ROOM_NOT_FOUND')) alert('房間不存在！');
-                    else alert('加入失敗: ' + error.message);
-                    fetchRoomList();
-                    return;
-                }
+      if (isAddition) {
+        exprText = `${num1} + (${num2})`;
+        correctAns = num1 + num2;
+      } else {
+        exprText = `${num1} - (${num2})`;
+        correctAns = num1 - num2;
+      }
 
-                currentRoomId = roomId;
-                currentSeat = 2;
-                setupGameChannel(currentRoomId);
+      // Format neatly
+      exprText = exprText.replace(/\+\ \(\-/g, '+ (-').replace(/\-\ \(\-/g, '- (-');
+      
+      // Generate options
+      const optionsSet = new Set([correctAns]);
+      while (optionsSet.size < 4) {
+        const offset = getRandomInt(-5, 5);
+        if (offset !== 0) optionsSet.add(correctAns + offset);
+      }
 
-            } catch (err) {
-                console.error("Join room error:", err);
-                alert("加入房間發生錯誤。");
-            }
-        }
+      const options = Array.from(optionsSet).sort(() => Math.random() - 0.5);
 
-        function setupGameChannel(roomId) {
-            if (gameChannel) {
-                supabaseClient.removeChannel(gameChannel);
-            }
+      currentQuestion = {
+        text: exprText,
+        options: options,
+        correct: correctAns
+      };
 
-            opponentWasPresent = false;
+      // Render Question
+      document.getElementById('question-box').innerHTML = `\\(${currentQuestion.text} = ?\\)`;
+      if (window.MathJax) window.MathJax.typesetPromise();
 
-            gameChannel = supabaseClient.channel(`game-${roomId}`, {
-                config: {
-                    presence: { key: clientToken }
-                }
-            });
+      const btnNodes = document.querySelectorAll('.option-btn');
+      options.forEach((opt, idx) => {
+        btnNodes[idx].textContent = opt;
+      });
+    }
 
-            // Broadcast: Host Probe Reply
-            gameChannel.on('broadcast', { event: 'join_probe' }, (payload) => {
-                if (currentSeat === 1 && payload.payload && payload.payload.probe_id) {
-                    gameChannel.send({
-                        type: 'broadcast',
-                        event: 'host_ack',
-                        payload: { probe_id: payload.payload.probe_id }
-                    });
-                }
-            });
+    // --- 10. ANSWER HANDLING & GAME LOGIC ---
+    async function handleAnswer(selectedIndex) {
+      if (!currentQuestion) return;
+      
+      const chosen = currentQuestion.options[selectedIndex];
+      const isCorrect = chosen === currentQuestion.correct;
 
-            // Postgres Changes: Game State Sync
-            gameChannel.on('postgres_changes', {
-                event: '*',
-                schema: 'public',
-                table: 'game_state',
-                filter: `room_id=eq.${roomId}`
-            }, (payload) => {
-                handleGameStateUpdate(payload.new);
-            });
+      generateNewQuestion(); // Instantly change question for smoothness
 
-            // Presence Tracking
-            gameChannel.on('presence', { event: 'sync' }, () => {
-                const presenceState = gameChannel.presenceState();
-                const presenceTokens = Object.keys(presenceState);
+      await supabase.rpc('resolve_answer', {
+        p_room_id: currentRoomId,
+        p_client_token: clientToken,
+        p_is_correct: isCorrect
+      })[cite: 3];
+    }
 
-                // Check if opponent token is present
-                const opponentPresent = presenceTokens.some(token => token !== clientToken);
+    function handleGameStateUpdate(gs) {
+      updateGameStateHUD(gs);
 
-                if (opponentPresent) {
-                    opponentWasPresent = true;
-                    if (disconnectTimer) {
-                        clearTimeout(disconnectTimer);
-                        disconnectTimer = null;
-                    }
-                } else if (opponentWasPresent) {
-                    // Opponent vanished after being present -> trigger 5s Grace Period
-                    if (!disconnectTimer) {
-                        disconnectTimer = setTimeout(() => {
-                            alert("對手已斷線！");
-                            leaveBattleToLobby();
-                        }, 5000);
-                    }
-                }
-            });
+      // Event Animation Flash
+      if (gs.last_event_id && gs.last_event_id !== lastEventId) {
+        lastEventId = gs.last_event_id;
+        triggerHitAnimation();
+      }
 
-            gameChannel.subscribe(async (status) => {
-                if (status === 'SUBSCRIBED') {
-                    await gameChannel.track({ seat: currentSeat, nickname: userNickname });
-                }
-            });
-        }
+      // Check Game Over
+      if (gs.status === 'finished') {
+        const isWinner = (gs.winner_seat === currentSeat);
+        showResult(isWinner);
+      }
+    }
 
-        function handleGameStateUpdate(gameState) {
-            if (!gameState) return;
+    function updateGameStateHUD(gs) {
+      let myHp = currentSeat === 1 ? gs.player1_hp : gs.player2_hp;
+      let oppHp = currentSeat === 1 ? gs.player2_hp : gs.player1_hp;
+      let myScore = currentSeat === 1 ? gs.player1_score : gs.player2_score;
+      let oppScore = currentSeat === 1 ? gs.player2_score : gs.player1_score;
 
-            // Stop waiting heartbeat if game starts
-            if (gameState.status === 'playing' || gameState.status === 'finished') {
-                stopHeartbeat();
-            }
+      document.getElementById('p1-hp-bar').style.width = `${(myHp / 7) * 100}%`;
+      document.getElementById('p2-hp-bar').style.width = `${(oppHp / 7) * 100}%`;
+      document.getElementById('p1-score').textContent = myScore;
+      document.getElementById('p2-score').textContent = oppScore;
+    }
 
-            // Switch to Battle View
-            if (gameState.status === 'playing' && document.getElementById('screen-battle').classList.contains('hidden')) {
-                showScreen('screen-battle');
-                initAnimalAvatars(gameState.room_id);
-                generateNewQuestion();
-            }
+    function triggerHitAnimation() {
+      const card = screens.battle;
+      card.classList.add('hit-anim');
+      setTimeout(() => card.classList.remove('hit-anim'), 300);
+    }
 
-            // Sync HP & Scores
-            const myHP = currentSeat === 1 ? gameState.player1_hp : gameState.player2_hp;
-            const oppHP = currentSeat === 1 ? gameState.player2_hp : gameState.player1_hp;
-            
-            const myScore = currentSeat === 1 ? gameState.player1_score : gameState.player2_score;
-            const oppScore = currentSeat === 1 ? gameState.player2_score : gameState.player1_score;
+    // --- 11. RESULT & DISCONNECT LOGIC ---
+    function showResult(isWinner) {
+      showScreen('result');
+      const title = document.getElementById('result-title');
+      const desc = document.getElementById('result-desc');
+      const avatar = document.getElementById('result-avatar');
 
-            updateHUD(myHP, oppHP, myScore, oppScore);
+      if (isWinner) {
+        title.textContent = '🎉 勝利！';
+        title.style.color = '#38a169';
+        avatar.textContent = '🏆';
+        desc.textContent = '太厲害了！你成功戰勝了對手！';
+      } else {
+        title.textContent = '💪 再接再厲！';
+        title.style.color = '#e53e3e';
+        avatar.textContent = '⭐';
+        desc.textContent = '差一點點，下次一定能贏回來！';
+      }
+    }
 
-            // Handle Game Finish Winner
-            if (gameState.status === 'finished') {
-                showResultModal(gameState.winner_seat === currentSeat);
-            }
-        }
+    function endGameDisconnect() {
+      showScreen('result');
+      document.getElementById('result-title').textContent = '⚠️ 對手已斷線';
+      document.getElementById('result-title').style.color = '#dd6b20';
+      document.getElementById('result-avatar').textContent = '🔌';
+      document.getElementById('result-desc').textContent = '因為對手離開了遊戲，對戰已終止。';
+    }
 
-        function initAnimalAvatars(roomId) {
-            // Deterministic Avatar Picker using roomId hash
-            let hash = 0;
-            for (let i = 0; i < roomId.length; i++) {
-                hash = roomId.charCodeAt(i) + ((hash << 5) - hash);
-            }
-            const idx1 = Math.abs(hash) % ANIMAL_AVATARS.length;
-            const idx2 = (idx1 + 3) % ANIMAL_AVATARS.length;
+    document.getElementById('btn-back-lobby').addEventListener('click', () => {
+      cleanupRoomState();
+      showScreen('lobby');
+      fetchLiveRooms();
+    });
 
-            const myAvatar = currentSeat === 1 ? ANIMAL_AVATARS[idx1] : ANIMAL_AVATARS[idx2];
-            const oppAvatar = currentSeat === 1 ? ANIMAL_AVATARS[idx2] : ANIMAL_AVATARS[idx1];
+    function cleanupRoomState() {
+      stopHeartbeat();
+      if (opponentDisconnectTimer) clearTimeout(opponentDisconnectTimer);
+      opponentDisconnectTimer = null;
+      if (gameChannel) supabase.removeChannel(gameChannel);
+      gameChannel = null;
+      currentRoomId = null;
+      currentSeat = null;
+      opponentWasPresent = false;
+    }
 
-            document.getElementById('my-avatar').innerText = myAvatar;
-            document.getElementById('opp-avatar').innerText = oppAvatar;
+    // Utilities
+    function escapeHtml(str) {
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
 
-            document.getElementById('my-name-display').innerText = userNickname + ' (我)';
-            document.getElementById('opp-name-display').innerText = '對手';
-        }
-
-        function updateHUD(myHP, oppHP, myScore, oppScore) {
-            const maxHP = 7;
-            const myPct = Math.max(0, (myHP / maxHP) * 100);
-            const oppPct = Math.max(0, (oppHP / maxHP) * 100);
-
-            document.getElementById('my-hp-bar').style.width = myPct + '%';
-            document.getElementById('opp-hp-bar').style.width = oppPct + '%';
-
-            document.getElementById('my-hp-text').innerText = `${Math.max(0, myHP)} / ${maxHP} HP`;
-            document.getElementById('opp-hp-text').innerText = `${Math.max(0, oppHP)} / ${maxHP} HP`;
-
-            document.getElementById('my-score-display').innerText = `${myScore || 0}分`;
-            document.getElementById('opp-score-display').innerText = `${oppScore || 0}分`;
-        }
-
-        function generateNewQuestion() {
-            // Grade 7 Math: Integer Addition and Subtraction
-            // Randomly generate 2 numbers between -25 and 25 (excluding 0 for clarity)
-            let a = 0, b = 0;
-            while (a === 0) a = Math.floor(Math.random() * 50) - 25;
-            while (b === 0) b = Math.floor(Math.random() * 50) - 25;
-
-            const isAddition = Math.random() > 0.5;
-            const answer = isAddition ? (a + b) : (a - b);
-
-            const formatNum = (num) => num < 0 ? `(${num})` : `${num}`;
-            const opSymbol = isAddition ? '+' : '-';
-            const questionStr = `${formatNum(a)} ${opSymbol} ${formatNum(b)} = ?`;
-
-            // Generate 3 unique wrong distractors
-            const distractors = new Set();
-            distractors.add(answer);
-
-            while (distractors.size < 4) {
-                let offset = Math.floor(Math.random() * 12) - 6;
-                if (offset === 0) offset = 2;
-                const wrong = answer + offset;
-                distractors.add(wrong);
-            }
-
-            const options = Array.from(distractors).sort(() => Math.random() - 0.5);
-
-            currentQuestion = {
-                text: questionStr,
-                options: options,
-                answer: answer
-            };
-
-            // Render on screen
-            document.getElementById('question-text').innerText = questionStr;
-            const labels = ['A', 'B', 'C', 'D'];
-            options.forEach((opt, idx) => {
-                document.getElementById(`opt-${idx}`).innerText = `${labels[idx]}. ${opt}`;
-            });
-        }
-
-        async function submitAnswer(optionIndex) {
-            if (!currentQuestion) return;
-
-            const selectedValue = currentQuestion.options[optionIndex];
-            const isCorrect = selectedValue === currentQuestion.answer;
-
-            // Trigger Visual Animation Effect
-            triggerAnswerEffect(isCorrect);
-
-            // Call Supabase RPC resolve_answer
-            try {
-                await supabaseClient.rpc('resolve_answer', {
-                    p_room_id: currentRoomId,
-                    p_client_token: clientToken,
-                    p_is_correct: isCorrect
-                });
-            } catch (err) {
-                console.error("Resolve answer error:", err);
-            }
-
-            // Immediately load next question locally for snappy game flow
-            setTimeout(() => {
-                generateNewQuestion();
-            }, 600);
-        }
-
-        function triggerAnswerEffect(isCorrect) {
-            const feedbackOverlay = document.getElementById('battle-feedback');
-            const feedbackIcon = document.getElementById('feedback-icon');
-            const feedbackText = document.getElementById('feedback-text');
-            const questionCard = document.getElementById('question-card');
-
-            if (isCorrect) {
-                feedbackIcon.innerText = '⚡';
-                feedbackText.innerText = '答對！精準打擊！';
-                feedbackText.className = 'text-2xl font-black text-emerald-400';
-            } else {
-                feedbackIcon.innerText = '💥';
-                feedbackText.innerText = '差一點，再試一次！';
-                feedbackText.className = 'text-2xl font-black text-rose-400';
-                questionCard.classList.add('animate-shake');
-                setTimeout(() => questionCard.classList.remove('animate-shake'), 500);
-            }
-
-            feedbackOverlay.classList.remove('hidden');
-            feedbackOverlay.classList.add('flex');
-
-            setTimeout(() => {
-                feedbackOverlay.classList.add('hidden');
-                feedbackOverlay.classList.remove('flex');
-            }, 550);
-        }
-
-        function showResultModal(isWinner) {
-            const modal = document.getElementById('modal-result');
-            const title = document.getElementById('result-title');
-            const desc = document.getElementById('result-desc');
-            const emoji = document.getElementById('result-emoji');
-
-            if (isWinner) {
-                emoji.innerText = '🏆';
-                title.innerText = '大獲全勝！';
-                title.className = 'text-3xl font-black text-amber-400 mb-2';
-                desc.innerText = '恭喜你贏得這場正負數運算對決！';
-            } else {
-                emoji.innerText = '💪';
-                title.innerText = '再接再厲！';
-                title.className = 'text-3xl font-black text-sky-400 mb-2';
-                desc.innerText = '很可惜這次差了一點點，繼續練習成為數學大師！';
-            }
-
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-        }
-
-        function leaveBattleToLobby() {
-            document.getElementById('modal-result').classList.add('hidden');
-            document.getElementById('modal-result').classList.remove('flex');
-            
-            cleanupRoomState();
-            showScreen('screen-lobby');
-            fetchRoomList();
-        }
-
-        function cleanupRoomState() {
-            stopHeartbeat();
-            if (disconnectTimer) {
-                clearTimeout(disconnectTimer);
-                disconnectTimer = null;
-            }
-
-            if (gameChannel) {
-                supabaseClient.removeChannel(gameChannel);
-                gameChannel = null;
-            }
-
-            currentRoomId = null;
-            currentSeat = 0;
-            currentQuestion = null;
-            opponentWasPresent = false;
-        }
-
-        // Helper string escape
-        function escapeHtml(str) {
-            return String(str).replace(/[&<>"']/g, function(m) {
-                return {
-                    '&': '&amp;',
-                    '<': '&lt;',
-                    '>': '&gt;',
-                    '"': '&quot;',
-                    "'": '&#39;'
-                }[m];
-            });
-        }
-    </script>
+    // Unload Page Handling
+    window.addEventListener('pagehide', () => {
+      if (currentRoomId && currentSeat === 1) {
+        // Attempt fast cancel on exit
+        navigator.sendBeacon && navigator.sendBeacon(
+          `${SUPABASE_URL}/rest/v1/rpc/cancel_room`,
+          JSON.stringify({ p_room_id: currentRoomId, p_client_token: clientToken })
+        );
+      }
+    });
+  </script>
 </body>
 </html>
